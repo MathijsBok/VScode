@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
 import { ticketApi, commentApi } from '../lib/api';
+import { useView } from '../contexts/ViewContext';
 import Layout from '../components/Layout';
 import { format } from 'date-fns';
 
@@ -12,11 +13,11 @@ const TicketDetail: React.FC = () => {
   const { user } = useUser();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { currentView } = useView();
   const userRole = user?.publicMetadata?.role as string;
 
   const [replyBody, setReplyBody] = useState('');
   const [isInternal, setIsInternal] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState('');
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: ['ticket', id],
@@ -136,7 +137,26 @@ const TicketDetail: React.FC = () => {
       <div className="space-y-6">
         {/* Back button */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            // Navigate back to the appropriate dashboard based on current view
+            if (userRole === 'ADMIN') {
+              switch (currentView) {
+                case 'USER':
+                  navigate('/user');
+                  break;
+                case 'AGENT':
+                  navigate('/agent');
+                  break;
+                case 'ADMIN':
+                  navigate('/admin');
+                  break;
+                default:
+                  navigate(-1);
+              }
+            } else {
+              navigate(-1);
+            }
+          }}
           className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -189,7 +209,7 @@ const TicketDetail: React.FC = () => {
                   </button>
                 )}
                 <select
-                  value={selectedStatus || ticket.status}
+                  value={ticket.status}
                   onChange={handleStatusChange}
                   disabled={updateStatusMutation.isPending}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"

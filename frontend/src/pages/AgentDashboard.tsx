@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { ticketApi, sessionApi } from '../lib/api';
 import Layout from '../components/Layout';
 import { format } from 'date-fns';
+import { useNotification } from '../contexts/NotificationContext';
+import { useTicketNotifications } from '../hooks/useTicketNotifications';
 
 const AgentDashboard: React.FC = () => {
-  const { user } = useUser();
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  const { permission, requestPermission, isSupported } = useNotification();
+  const { newTicketCount, isPolling } = useTicketNotifications({
+    enabled: notificationsEnabled,
+    pollingInterval: 30000 // Poll every 30 seconds
+  });
 
   // Start session on mount
   useEffect(() => {
@@ -35,7 +43,7 @@ const AgentDashboard: React.FC = () => {
     };
   }, []);
 
-  const { data: tickets, isLoading, refetch } = useQuery({
+  const { data: tickets, isLoading } = useQuery({
     queryKey: ['agentTickets', statusFilter],
     queryFn: async () => {
       const response = await ticketApi.getAll(
@@ -74,15 +82,84 @@ const AgentDashboard: React.FC = () => {
     { value: 'SOLVED', label: 'Solved' }
   ];
 
+  const handleToggleNotifications = async () => {
+    if (!isSupported) {
+      return;
+    }
+
+    if (permission === 'granted') {
+      setNotificationsEnabled(!notificationsEnabled);
+    } else if (permission === 'default') {
+      await requestPermission();
+      if (Notification.permission === 'granted') {
+        setNotificationsEnabled(true);
+      }
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Agent Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Manage and respond to customer tickets
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Agent Dashboard</h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              Manage and respond to customer tickets
+            </p>
+          </div>
+
+          {/* Notification Settings */}
+          {isSupported && (
+            <div className="flex items-center gap-3">
+              {isPolling && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-700 dark:text-green-300">
+                    {newTicketCount > 0 ? `${newTicketCount} new` : 'Monitoring'}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={handleToggleNotifications}
+                className={`relative inline-flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  notificationsEnabled
+                    ? 'bg-primary text-primary-foreground hover:opacity-90'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+                title={
+                  permission === 'denied'
+                    ? 'Notifications blocked. Please enable in browser settings.'
+                    : notificationsEnabled
+                    ? 'Disable notifications'
+                    : 'Enable notifications'
+                }
+                disabled={permission === 'denied'}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d={
+                      notificationsEnabled
+                        ? 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'
+                        : 'M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z'
+                    }
+                  />
+                  {!notificationsEnabled && (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 3l18 18"
+                    />
+                  )}
+                </svg>
+                {notificationsEnabled ? 'Notifications On' : 'Enable Notifications'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Statistics Cards */}
@@ -168,22 +245,16 @@ const AgentDashboard: React.FC = () => {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {tickets.map((ticket: any) => (
-                  <tr key={ticket.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        to={`/tickets/${ticket.id}`}
-                        className="text-sm font-medium text-primary hover:underline"
-                      >
-                        #{ticket.ticketNumber}
-                      </Link>
+                  <tr
+                    key={ticket.id}
+                    onClick={() => navigate(`/tickets/${ticket.id}`)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">
+                      #{ticket.ticketNumber}
                     </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        to={`/tickets/${ticket.id}`}
-                        className="text-sm text-gray-900 dark:text-white hover:text-primary"
-                      >
-                        {ticket.subject}
-                      </Link>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {ticket.subject}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {ticket.requester.email}
