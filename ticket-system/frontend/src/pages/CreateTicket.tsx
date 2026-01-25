@@ -10,9 +10,9 @@ const CreateTicket: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('NORMAL');
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryId, _setCategoryId] = useState('');
 
-  const { data: forms } = useQuery({
+  const { data: _forms } = useQuery({
     queryKey: ['forms'],
     queryFn: async () => {
       const response = await formApi.getAll();

@@ -1,7 +1,8 @@
 import React from 'react';
 import { useUser, UserButton } from '@clerk/clerk-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { Link, useLocation } from 'react-router-dom';
+import { useView } from '../contexts/ViewContext';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,8 +11,40 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user } = useUser();
   const { theme, toggleTheme } = useTheme();
+  const { currentView, setCurrentView } = useView();
   const location = useLocation();
+  const navigate = useNavigate();
   const userRole = user?.publicMetadata?.role as string;
+
+  // Update currentView based on URL when user navigates
+  React.useEffect(() => {
+    if (userRole === 'ADMIN') {
+      if (location.pathname.startsWith('/admin')) {
+        setCurrentView('ADMIN');
+      } else if (location.pathname.startsWith('/agent')) {
+        setCurrentView('AGENT');
+      } else if (location.pathname.startsWith('/user')) {
+        setCurrentView('USER');
+      }
+      // Don't update for /tickets routes - maintain current view
+    }
+  }, [location.pathname, userRole, setCurrentView]);
+
+  const handleViewChange = (view: string) => {
+    const newView = view as 'USER' | 'AGENT' | 'ADMIN';
+    setCurrentView(newView);
+    switch (newView) {
+      case 'USER':
+        navigate('/user');
+        break;
+      case 'AGENT':
+        navigate('/agent');
+        break;
+      case 'ADMIN':
+        navigate('/admin');
+        break;
+    }
+  };
 
   const navigation = React.useMemo(() => {
     const nav = [];
@@ -63,6 +96,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {item.name}
                 </Link>
               ))}
+
+              {/* View As Role Switcher (Admin Only) */}
+              {userRole === 'ADMIN' && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">View as:</span>
+                  <select
+                    value={currentView}
+                    onChange={(e) => handleViewChange(e.target.value)}
+                    className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+                  >
+                    <option value="USER">User</option>
+                    <option value="AGENT">Agent</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
+              )}
 
               {/* Theme toggle */}
               <button

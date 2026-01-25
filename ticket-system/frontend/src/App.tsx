@@ -3,6 +3,8 @@ import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, useUser } from '@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { ViewProvider } from './contexts/ViewContext';
 
 // Pages
 import UserDashboard from './pages/UserDashboard';
@@ -45,24 +47,28 @@ function App() {
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <BrowserRouter>
-            <SignedIn>
-              <Routes>
-                <Route path="/" element={<DashboardRouter />} />
-                <Route path="/user" element={<UserDashboard />} />
-                <Route path="/agent" element={<AgentDashboard />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/forms" element={<AdminForms />} />
-                <Route path="/tickets/new" element={<CreateTicket />} />
-                <Route path="/tickets/:id" element={<TicketDetail />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </SignedIn>
-            <SignedOut>
-              <RedirectToSignIn />
-            </SignedOut>
-          </BrowserRouter>
-          <Toaster position="top-right" />
+          <NotificationProvider>
+            <ViewProvider>
+              <BrowserRouter>
+                <SignedIn>
+                  <Routes>
+                    <Route path="/" element={<DashboardRouter />} />
+                    <Route path="/user" element={<UserDashboard />} />
+                    <Route path="/agent" element={<AgentDashboard />} />
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/forms" element={<AdminForms />} />
+                    <Route path="/tickets/new" element={<CreateTicket />} />
+                    <Route path="/tickets/:id" element={<TicketDetail />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </SignedIn>
+                <SignedOut>
+                  <RedirectToSignIn />
+                </SignedOut>
+              </BrowserRouter>
+              <Toaster position="top-right" />
+            </ViewProvider>
+          </NotificationProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ClerkProvider>
