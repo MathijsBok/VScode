@@ -67,8 +67,9 @@ router.post('/',
   [
     body('name').isString().notEmpty(),
     body('description').optional().isString(),
-    body('fieldIds').optional().isArray(),
-    body('fieldIds.*').optional().isUUID(),
+    body('fields').optional().isArray(),
+    body('fields.*.fieldId').optional().isUUID(),
+    body('fields.*.required').optional().isBoolean(),
     body('isActive').optional().isBoolean()
   ],
   async (req: AuthRequest, res: Response) => {
@@ -78,7 +79,7 @@ router.post('/',
     }
 
     try {
-      const { name, description, fieldIds, isActive } = req.body;
+      const { name, description, fields, isActive } = req.body;
 
       // Create form with field associations in a transaction
       const form = await prisma.$transaction(async (tx) => {
@@ -90,13 +91,14 @@ router.post('/',
           }
         });
 
-        // Create FormField associations if fieldIds provided
-        if (fieldIds && Array.isArray(fieldIds) && fieldIds.length > 0) {
+        // Create FormField associations if fields provided
+        if (fields && Array.isArray(fields) && fields.length > 0) {
           await tx.formField.createMany({
-            data: fieldIds.map((fieldId: string, index: number) => ({
+            data: fields.map((field: { fieldId: string; required?: boolean }, index: number) => ({
               formId: newForm.id,
-              fieldId,
-              order: index
+              fieldId: field.fieldId,
+              order: index,
+              required: field.required !== undefined ? field.required : false
             }))
           });
         }
@@ -132,8 +134,9 @@ router.patch('/:id',
   [
     body('name').optional().isString(),
     body('description').optional().isString(),
-    body('fieldIds').optional().isArray(),
-    body('fieldIds.*').optional().isUUID(),
+    body('fields').optional().isArray(),
+    body('fields.*.fieldId').optional().isUUID(),
+    body('fields.*.required').optional().isBoolean(),
     body('isActive').optional().isBoolean()
   ],
   async (req: AuthRequest, res: Response) => {
@@ -144,7 +147,7 @@ router.patch('/:id',
 
     try {
       const { id } = req.params;
-      const { name, description, fieldIds, isActive } = req.body;
+      const { name, description, fields, isActive } = req.body;
 
       const form = await prisma.$transaction(async (tx) => {
         // Update form basic info
@@ -158,20 +161,21 @@ router.patch('/:id',
           }
         });
 
-        // Update field associations if fieldIds provided
-        if (fieldIds !== undefined && Array.isArray(fieldIds)) {
+        // Update field associations if fields provided
+        if (fields !== undefined && Array.isArray(fields)) {
           // Delete existing field associations
           await tx.formField.deleteMany({
             where: { formId: id }
           });
 
           // Create new associations
-          if (fieldIds.length > 0) {
+          if (fields.length > 0) {
             await tx.formField.createMany({
-              data: fieldIds.map((fieldId: string, index: number) => ({
+              data: fields.map((field: { fieldId: string; required?: boolean }, index: number) => ({
                 formId: id,
-                fieldId,
-                order: index
+                fieldId: field.fieldId,
+                order: index,
+                required: field.required !== undefined ? field.required : false
               }))
             });
           }

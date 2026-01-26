@@ -10,7 +10,7 @@ interface FormRendererProps {
 
 const FormRenderer: React.FC<FormRendererProps> = ({ fields, values, onChange, errors }) => {
   const renderField = (fieldAssignment: FormFieldAssignment) => {
-    const { field } = fieldAssignment;
+    const { field, required } = fieldAssignment;
     const value = values[field.id] || field.defaultValue || '';
     const error = errors?.[field.id];
 
@@ -29,7 +29,7 @@ const FormRenderer: React.FC<FormRendererProps> = ({ fields, values, onChange, e
             value={value}
             onChange={(e) => onChange(field.id, e.target.value)}
             placeholder={field.placeholder || ''}
-            required={field.required}
+            required={required}
             className={baseInputClasses}
           />
         );
@@ -41,7 +41,7 @@ const FormRenderer: React.FC<FormRendererProps> = ({ fields, values, onChange, e
             value={value}
             onChange={(e) => onChange(field.id, e.target.value)}
             placeholder={field.placeholder || ''}
-            required={field.required}
+            required={required}
             rows={4}
             className={baseInputClasses}
           />
@@ -53,7 +53,7 @@ const FormRenderer: React.FC<FormRendererProps> = ({ fields, values, onChange, e
             id={field.id}
             value={value}
             onChange={(e) => onChange(field.id, e.target.value)}
-            required={field.required}
+            required={required}
             className={baseInputClasses}
           >
             <option value="">
@@ -81,7 +81,7 @@ const FormRenderer: React.FC<FormRendererProps> = ({ fields, values, onChange, e
                   value={option}
                   checked={value === option}
                   onChange={(e) => onChange(field.id, e.target.value)}
-                  required={field.required && index === 0}
+                  required={required && index === 0}
                   className="text-primary focus:ring-primary"
                 />
                 <span className="text-sm text-gray-900 dark:text-white">
@@ -128,7 +128,7 @@ const FormRenderer: React.FC<FormRendererProps> = ({ fields, values, onChange, e
                 </label>
               );
             })}
-            {field.required && (
+            {required && (
               <input
                 type="text"
                 value={value}
@@ -157,7 +157,7 @@ const FormRenderer: React.FC<FormRendererProps> = ({ fields, values, onChange, e
   return (
     <div className="space-y-4">
       {fields.map((fieldAssignment) => {
-        const { field } = fieldAssignment;
+        const { field, required } = fieldAssignment;
         const error = errors?.[field.id];
 
         return (
@@ -167,7 +167,7 @@ const FormRenderer: React.FC<FormRendererProps> = ({ fields, values, onChange, e
               className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               {field.label}
-              {field.required && (
+              {required && (
                 <span className="text-red-500 ml-1">*</span>
               )}
             </label>

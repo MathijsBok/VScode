@@ -70,10 +70,10 @@ const CreateTicket: React.FC = () => {
     let isValid = true;
 
     selectedForm.formFields?.forEach(fieldAssignment => {
-      const { field } = fieldAssignment;
+      const { field, required } = fieldAssignment;
       const value = formValues[field.id];
 
-      if (field.required && (!value || value.trim() === '')) {
+      if (required && (!value || value.trim() === '')) {
         errors[field.id] = `${field.label} is required`;
         isValid = false;
       }

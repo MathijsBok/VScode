@@ -20,6 +20,7 @@ const AdminFieldLibrary: React.FC = () => {
   const [defaultValue, setDefaultValue] = useState('');
   const [options, setOptions] = useState<string[]>([]);
   const [optionInput, setOptionInput] = useState('');
+  const [draggedOptionIndex, setDraggedOptionIndex] = useState<number | null>(null);
 
   const { data: fields, isLoading } = useQuery({
     queryKey: ['fieldLibrary'],
@@ -106,6 +107,31 @@ const AdminFieldLibrary: React.FC = () => {
     setOptions(options.filter((_, i) => i !== index));
   };
 
+  // Drag and drop handlers for options
+  const handleOptionDragStart = (index: number) => {
+    setDraggedOptionIndex(index);
+  };
+
+  const handleOptionDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedOptionIndex === null || draggedOptionIndex === index) return;
+
+    const newOptions = [...options];
+    const draggedItem = newOptions[draggedOptionIndex];
+
+    // Remove from old position
+    newOptions.splice(draggedOptionIndex, 1);
+    // Insert at new position
+    newOptions.splice(index, 0, draggedItem);
+
+    setOptions(newOptions);
+    setDraggedOptionIndex(index);
+  };
+
+  const handleOptionDragEnd = () => {
+    setDraggedOptionIndex(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!label.trim()) {
@@ -155,21 +181,17 @@ const AdminFieldLibrary: React.FC = () => {
               Create and manage reusable form fields
             </p>
           </div>
-          <button
-            onClick={() => {
-              if (isFormOpen) {
-                resetForm();
-              } else {
-                setIsCreating(true);
-              }
-            }}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            {isFormOpen ? 'Cancel' : 'New Field'}
-          </button>
+          {!isFormOpen && (
+            <button
+              onClick={() => setIsCreating(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Field
+            </button>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -198,9 +220,20 @@ const AdminFieldLibrary: React.FC = () => {
         {/* Create/Edit Form */}
         {isFormOpen && (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {editingFieldId ? 'Edit Field' : 'Create New Field'}
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {editingFieldId ? 'Edit Field' : 'Create New Field'}
+              </h2>
+              <button
+                onClick={resetForm}
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to List
+              </button>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -310,7 +343,24 @@ const AdminFieldLibrary: React.FC = () => {
                     {options.length > 0 && (
                       <div className="space-y-1">
                         {options.map((option, index) => (
-                          <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                          <div
+                            key={index}
+                            draggable
+                            onDragStart={() => handleOptionDragStart(index)}
+                            onDragOver={(e) => handleOptionDragOver(e, index)}
+                            onDragEnd={handleOptionDragEnd}
+                            className={`flex items-center gap-2 p-2 rounded cursor-move transition-all ${
+                              draggedOptionIndex === index
+                                ? 'bg-blue-100 dark:bg-blue-900/50 border-2 border-blue-500 dark:border-blue-400 scale-105 shadow-lg'
+                                : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 border-2 border-transparent'
+                            }`}
+                          >
+                            {/* Drag handle icon */}
+                            <div className="text-gray-400">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                              </svg>
+                            </div>
                             <span className="flex-1 text-sm text-gray-900 dark:text-white">{option}</span>
                             <button
                               type="button"
@@ -359,14 +409,14 @@ const AdminFieldLibrary: React.FC = () => {
         )}
 
         {/* Loading State */}
-        {isLoading && (
+        {!isFormOpen && isLoading && (
           <div className="text-center py-8">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         )}
 
         {/* Fields List */}
-        {filteredFields && filteredFields.length > 0 && (
+        {!isFormOpen && filteredFields && filteredFields.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900">
@@ -445,7 +495,7 @@ const AdminFieldLibrary: React.FC = () => {
         )}
 
         {/* Empty State */}
-        {fields && fields.length === 0 && !isFormOpen && (
+        {!isFormOpen && fields && fields.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -458,7 +508,7 @@ const AdminFieldLibrary: React.FC = () => {
         )}
 
         {/* No Results State */}
-        {filteredFields && filteredFields.length === 0 && searchQuery && (
+        {!isFormOpen && filteredFields && filteredFields.length === 0 && searchQuery && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

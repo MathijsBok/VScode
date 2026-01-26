@@ -248,10 +248,11 @@ model FormFieldLibrary {
 }
 
 model FormField {
-  id      String @id @default(uuid()) @db.Uuid
-  formId  String @db.Uuid
-  fieldId String @db.Uuid
-  order   Int
+  id       String  @id @default(uuid()) @db.Uuid
+  formId   String  @db.Uuid
+  fieldId  String  @db.Uuid
+  order    Int
+  required Boolean @default(false)
 
   form  Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
   field FormFieldLibrary @relation(fields: [fieldId], references: [id])
