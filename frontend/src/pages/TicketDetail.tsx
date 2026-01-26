@@ -329,6 +329,7 @@ const TicketDetail: React.FC = () => {
           <div className="space-y-6">
             {ticket.comments
               .filter((comment: any) => isAgent || !comment.isInternal)
+              .reverse()
               .map((comment: any) => (
                 <div
                   key={comment.id}

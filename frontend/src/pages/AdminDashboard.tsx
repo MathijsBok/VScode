@@ -594,19 +594,19 @@ const AdminDashboard: React.FC = () => {
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Sessions
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Avg Duration
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Replies
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Assigned
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Solved
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
@@ -632,7 +632,7 @@ const AdminDashboard: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full ${
                             stat.sessions.isOnline
                               ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                               : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
@@ -641,32 +641,32 @@ const AdminDashboard: React.FC = () => {
                             {stat.sessions.isOnline ? 'Online' : 'Offline'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
                             {stat.sessions.total}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                           {formatDuration(stat.sessions.avgDuration)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-semibold bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
                             {stat.replies.total}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
                             {stat.tickets.assigned}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-semibold bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                             {stat.tickets.solved}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 w-20">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 w-24">
                               <div
                                 className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-500"
                                 style={{ width: `${stat.tickets.solveRate}%` }}
