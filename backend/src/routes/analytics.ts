@@ -187,7 +187,8 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req: AuthRequest, re
       avgResolutionTime,
       totalComments,
       hourlyDistribution,
-      weekdayDistribution
+      weekdayDistribution,
+      fieldResponseStats
     ] = await Promise.all([
       // Total tickets
       prisma.ticket.count(),
@@ -287,7 +288,13 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req: AuthRequest, re
         FROM "Ticket"
         GROUP BY EXTRACT(DOW FROM "createdAt")
         ORDER BY day ASC
-      `
+      `,
+
+      // Field response statistics (how many times each field was filled)
+      prisma.formResponse.groupBy({
+        by: ['fieldId'],
+        _count: true
+      })
     ]);
 
     // Process status data
@@ -338,7 +345,10 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req: AuthRequest, re
       })
     );
 
-    const formData = formDataWithNames.filter(Boolean).slice(0, 10);
+    const formData = formDataWithNames
+      .filter(Boolean)
+      .sort((a, b) => b!.value - a!.value)
+      .slice(0, 10);
 
     // Process agent data with names
     const agentDataWithNames = await Promise.all(
@@ -420,6 +430,28 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req: AuthRequest, re
       solved: Number(item.solved)
     }));
 
+    // Process field response statistics with field names and usage counts
+    const fieldDataWithNames = await Promise.all(
+      fieldResponseStats.map(async (item) => {
+        const field = await prisma.formFieldLibrary.findUnique({
+          where: { id: item.fieldId },
+          select: { label: true, fieldType: true }
+        });
+        return {
+          name: field?.label || 'Unknown Field',
+          fieldType: field?.fieldType || 'unknown',
+          responseCount: item._count,
+          value: item._count
+        };
+      })
+    );
+    const fieldUsageData = fieldDataWithNames
+      .sort((a, b) => b.responseCount - a.responseCount)
+      .slice(0, 15); // Top 15 most used fields
+
+    // Calculate total form responses
+    const totalFormResponses = fieldResponseStats.reduce((sum, item) => sum + item._count, 0);
+
     return res.json({
       overview: {
         totalTickets,
@@ -428,7 +460,8 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req: AuthRequest, re
         avgResolutionTime: avgResolutionHours,
         solveRate: totalTickets > 0 ? ((solvedTickets / totalTickets) * 100).toFixed(1) : '0',
         totalComments,
-        avgCommentsPerTicket
+        avgCommentsPerTicket,
+        totalFormResponses
       },
       charts: {
         status: statusData,
@@ -439,7 +472,8 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req: AuthRequest, re
         agents: agentData,
         categories: categoryData,
         hourly: hourlyData,
-        weekday: weekdayData
+        weekday: weekdayData,
+        fieldUsage: fieldUsageData
       },
       trend: trendData
     });
