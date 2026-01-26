@@ -114,6 +114,7 @@ export interface Form {
   name: string;
   description?: string;
   isActive: boolean;
+  order: number;
   formFields: FormFieldAssignment[];
   createdAt: string;
   updatedAt: string;

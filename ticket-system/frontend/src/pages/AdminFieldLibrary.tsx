@@ -108,8 +108,27 @@ const AdminFieldLibrary: React.FC = () => {
   };
 
   // Drag and drop handlers for options
-  const handleOptionDragStart = (index: number) => {
+  const handleOptionDragStart = (e: React.DragEvent, index: number) => {
     setDraggedOptionIndex(index);
+
+    // Create a custom drag image with solid background
+    const target = e.currentTarget as HTMLElement;
+    const clone = target.cloneNode(true) as HTMLElement;
+    clone.style.backgroundColor = 'rgb(219, 234, 254)';
+    clone.style.opacity = '1';
+    clone.style.position = 'absolute';
+    clone.style.top = '-9999px';
+    clone.style.width = target.offsetWidth + 'px';
+    document.body.appendChild(clone);
+
+    e.dataTransfer.setDragImage(clone, 0, 0);
+
+    // Remove clone after a short delay
+    setTimeout(() => document.body.removeChild(clone), 0);
+
+    // Also set styles on original element for visual feedback
+    target.style.backgroundColor = 'rgb(219, 234, 254)';
+    target.style.opacity = '1';
   };
 
   const handleOptionDragOver = (e: React.DragEvent, index: number) => {
@@ -128,7 +147,11 @@ const AdminFieldLibrary: React.FC = () => {
     setDraggedOptionIndex(index);
   };
 
-  const handleOptionDragEnd = () => {
+  const handleOptionDragEnd = (e: React.DragEvent) => {
+    // Clear inline styles
+    const target = e.currentTarget as HTMLElement;
+    target.style.backgroundColor = '';
+    target.style.opacity = '';
     setDraggedOptionIndex(null);
   };
 
@@ -346,13 +369,13 @@ const AdminFieldLibrary: React.FC = () => {
                           <div
                             key={index}
                             draggable
-                            onDragStart={() => handleOptionDragStart(index)}
+                            onDragStart={(e) => handleOptionDragStart(e, index)}
                             onDragOver={(e) => handleOptionDragOver(e, index)}
                             onDragEnd={handleOptionDragEnd}
                             className={`flex items-center gap-2 p-2 rounded cursor-move transition-all ${
                               draggedOptionIndex === index
-                                ? 'bg-blue-100 dark:bg-blue-900/50 border-2 border-blue-500 dark:border-blue-400 scale-105 shadow-lg'
-                                : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 border-2 border-transparent'
+                                ? 'bg-blue-100 dark:bg-blue-100 border-2 border-blue-500 dark:border-blue-500 scale-105 shadow-lg opacity-100'
+                                : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border-2 border-transparent'
                             }`}
                           >
                             {/* Drag handle icon */}

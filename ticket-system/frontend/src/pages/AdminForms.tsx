@@ -13,6 +13,7 @@ const AdminForms: React.FC = () => {
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [fieldConfigs, setFieldConfigs] = useState<Array<{ fieldId: string; required: boolean }>>([]);
+  const [draggedFormIndex, setDraggedFormIndex] = useState<number | null>(null);
 
   const { data: forms, isLoading: formsLoading } = useQuery({
     queryKey: ['adminForms'],
@@ -70,6 +71,18 @@ const AdminForms: React.FC = () => {
     },
     onError: () => {
       toast.error('Failed to delete form');
+    }
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: async (formIds: string[]) => {
+      await formApi.reorder(formIds);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminForms'] });
+    },
+    onError: () => {
+      toast.error('Failed to reorder forms');
     }
   });
 
@@ -132,8 +145,27 @@ const AdminForms: React.FC = () => {
   // Drag and drop handlers
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  const handleDragStart = (index: number) => {
+  const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
+
+    // Create a custom drag image with solid background
+    const target = e.currentTarget as HTMLElement;
+    const clone = target.cloneNode(true) as HTMLElement;
+    clone.style.backgroundColor = 'rgb(219, 234, 254)';
+    clone.style.opacity = '1';
+    clone.style.position = 'absolute';
+    clone.style.top = '-9999px';
+    clone.style.width = target.offsetWidth + 'px';
+    document.body.appendChild(clone);
+
+    e.dataTransfer.setDragImage(clone, 0, 0);
+
+    // Remove clone after a short delay
+    setTimeout(() => document.body.removeChild(clone), 0);
+
+    // Also set styles on original element for visual feedback
+    target.style.backgroundColor = 'rgb(219, 234, 254)';
+    target.style.opacity = '1';
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -152,8 +184,66 @@ const AdminForms: React.FC = () => {
     setDraggedIndex(index);
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e: React.DragEvent) => {
+    // Clear inline styles
+    const target = e.currentTarget as HTMLElement;
+    target.style.backgroundColor = '';
+    target.style.opacity = '';
     setDraggedIndex(null);
+  };
+
+  // Drag and drop handlers for forms
+  const handleFormDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedFormIndex(index);
+
+    // Create a custom drag image with solid background
+    const target = e.currentTarget as HTMLElement;
+    const clone = target.cloneNode(true) as HTMLElement;
+    clone.style.backgroundColor = 'rgb(219, 234, 254)';
+    clone.style.opacity = '1';
+    clone.style.position = 'absolute';
+    clone.style.top = '-9999px';
+    clone.style.width = target.offsetWidth + 'px';
+    document.body.appendChild(clone);
+
+    e.dataTransfer.setDragImage(clone, 0, 0);
+
+    // Remove clone after a short delay
+    setTimeout(() => document.body.removeChild(clone), 0);
+
+    // Also set styles on original element for visual feedback
+    target.style.backgroundColor = 'rgb(219, 234, 254)';
+    target.style.opacity = '1';
+  };
+
+  const handleFormDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedFormIndex === null || draggedFormIndex === index || !forms) return;
+
+    const newForms = [...forms];
+    const draggedItem = newForms[draggedFormIndex];
+
+    // Remove from old position
+    newForms.splice(draggedFormIndex, 1);
+    // Insert at new position
+    newForms.splice(index, 0, draggedItem);
+
+    // Update the query cache optimistically
+    queryClient.setQueryData(['adminForms'], newForms);
+    setDraggedFormIndex(index);
+  };
+
+  const handleFormDragEnd = (e: React.DragEvent) => {
+    if (draggedFormIndex !== null && forms) {
+      // Send the new order to the server
+      const formIds = forms.map(form => form.id);
+      reorderMutation.mutate(formIds);
+    }
+    // Clear inline styles
+    const target = e.currentTarget as HTMLElement;
+    target.style.backgroundColor = '';
+    target.style.opacity = '';
+    setDraggedFormIndex(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -320,7 +410,7 @@ const AdminForms: React.FC = () => {
                             onDragEnd={handleDragEnd}
                             className={`flex items-center gap-2 p-3 cursor-move transition-all ${
                               draggedIndex === index
-                                ? 'bg-blue-100 dark:bg-blue-900/50 border-2 border-blue-500 dark:border-blue-400 scale-105 shadow-lg'
+                                ? 'bg-blue-100 dark:bg-blue-100 border-2 border-blue-500 dark:border-blue-500 scale-105 shadow-lg opacity-100'
                                 : 'hover:bg-gray-50 dark:hover:bg-gray-600/50 border-2 border-transparent'
                             }`}
                           >
@@ -429,9 +519,20 @@ const AdminForms: React.FC = () => {
 
         {!isFormOpen && forms && forms.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="inline-flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                  </svg>
+                  Drag and drop rows to reorder forms
+                </span>
+              </p>
+            </div>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
+                  <th className="w-12 px-3 py-3"></th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Name
                   </th>
@@ -453,8 +554,26 @@ const AdminForms: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {forms.map((form) => (
-                  <tr key={form.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                {forms.map((form, index) => (
+                  <tr
+                    key={form.id}
+                    draggable
+                    onDragStart={(e) => handleFormDragStart(e, index)}
+                    onDragOver={(e) => handleFormDragOver(e, index)}
+                    onDragEnd={handleFormDragEnd}
+                    className={`cursor-move transition-all ${
+                      draggedFormIndex === index
+                        ? 'bg-blue-100 dark:bg-blue-100 scale-105 shadow-lg opacity-100'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 bg-white dark:bg-gray-800'
+                    }`}
+                  >
+                    <td className="px-3 py-4">
+                      <div className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                        </svg>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {form.name}
                     </td>

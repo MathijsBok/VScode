@@ -146,6 +146,9 @@ export const formApi = {
   }) =>
     api.patch(`/forms/${id}`, data),
 
+  reorder: (formIds: string[]) =>
+    api.patch('/forms/reorder', { formIds }),
+
   delete: (id: string) =>
     api.delete(`/forms/${id}`)
 };
