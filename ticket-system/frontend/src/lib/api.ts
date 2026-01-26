@@ -33,6 +33,7 @@ export const ticketApi = {
     priority?: string;
     categoryId?: string;
     formId?: string;
+    formResponses?: Array<{ fieldId: string; value: string }>;
   }) =>
     api.post('/tickets', data),
 
@@ -89,6 +90,38 @@ export const attachmentApi = {
     })
 };
 
+// Field Library API
+export const fieldLibraryApi = {
+  getAll: () =>
+    api.get('/fields'),
+
+  getById: (id: string) =>
+    api.get(`/fields/${id}`),
+
+  create: (data: {
+    label: string;
+    fieldType: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio';
+    required?: boolean;
+    options?: string[];
+    placeholder?: string;
+    defaultValue?: string;
+  }) =>
+    api.post('/fields', data),
+
+  update: (id: string, data: {
+    label?: string;
+    fieldType?: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio';
+    required?: boolean;
+    options?: string[];
+    placeholder?: string;
+    defaultValue?: string;
+  }) =>
+    api.patch(`/fields/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/fields/${id}`)
+};
+
 // Form API
 export const formApi = {
   getAll: () =>
@@ -100,7 +133,7 @@ export const formApi = {
   create: (data: {
     name: string;
     description?: string;
-    fields: any[];
+    fieldIds?: string[];
     isActive?: boolean;
   }) =>
     api.post('/forms', data),
@@ -108,7 +141,7 @@ export const formApi = {
   update: (id: string, data: {
     name?: string;
     description?: string;
-    fields?: any[];
+    fieldIds?: string[];
     isActive?: boolean;
   }) =>
     api.patch(`/forms/${id}`, data),

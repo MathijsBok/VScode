@@ -10,7 +10,17 @@ router.get('/', requireAuth, async (_req: AuthRequest, res: Response) => {
   try {
     const forms = await prisma.form.findMany({
       where: { isActive: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        formFields: {
+          include: {
+            field: true
+          },
+          orderBy: {
+            order: 'asc'
+          }
+        }
+      }
     });
 
     return res.json(forms);
@@ -26,7 +36,17 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const form = await prisma.form.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        formFields: {
+          include: {
+            field: true
+          },
+          orderBy: {
+            order: 'asc'
+          }
+        }
+      }
     });
 
     if (!form) {
@@ -47,7 +67,8 @@ router.post('/',
   [
     body('name').isString().notEmpty(),
     body('description').optional().isString(),
-    body('fields').isArray(),
+    body('fieldIds').optional().isArray(),
+    body('fieldIds.*').optional().isUUID(),
     body('isActive').optional().isBoolean()
   ],
   async (req: AuthRequest, res: Response) => {
@@ -57,15 +78,43 @@ router.post('/',
     }
 
     try {
-      const { name, description, fields, isActive } = req.body;
+      const { name, description, fieldIds, isActive } = req.body;
 
-      const form = await prisma.form.create({
-        data: {
-          name,
-          description: description || null,
-          fields,
-          isActive: isActive !== undefined ? isActive : true
+      // Create form with field associations in a transaction
+      const form = await prisma.$transaction(async (tx) => {
+        const newForm = await tx.form.create({
+          data: {
+            name,
+            description: description || null,
+            isActive: isActive !== undefined ? isActive : true
+          }
+        });
+
+        // Create FormField associations if fieldIds provided
+        if (fieldIds && Array.isArray(fieldIds) && fieldIds.length > 0) {
+          await tx.formField.createMany({
+            data: fieldIds.map((fieldId: string, index: number) => ({
+              formId: newForm.id,
+              fieldId,
+              order: index
+            }))
+          });
         }
+
+        // Fetch form with fields
+        return await tx.form.findUnique({
+          where: { id: newForm.id },
+          include: {
+            formFields: {
+              include: {
+                field: true
+              },
+              orderBy: {
+                order: 'asc'
+              }
+            }
+          }
+        });
       });
 
       return res.status(201).json(form);
@@ -83,7 +132,8 @@ router.patch('/:id',
   [
     body('name').optional().isString(),
     body('description').optional().isString(),
-    body('fields').optional().isArray(),
+    body('fieldIds').optional().isArray(),
+    body('fieldIds.*').optional().isUUID(),
     body('isActive').optional().isBoolean()
   ],
   async (req: AuthRequest, res: Response) => {
@@ -94,17 +144,53 @@ router.patch('/:id',
 
     try {
       const { id } = req.params;
-      const { name, description, fields, isActive } = req.body;
+      const { name, description, fieldIds, isActive } = req.body;
 
-      const form = await prisma.form.update({
-        where: { id },
-        data: {
-          ...(name && { name }),
-          ...(description !== undefined && { description }),
-          ...(fields && { fields }),
-          ...(isActive !== undefined && { isActive }),
-          updatedAt: new Date()
+      const form = await prisma.$transaction(async (tx) => {
+        // Update form basic info
+        await tx.form.update({
+          where: { id },
+          data: {
+            ...(name && { name }),
+            ...(description !== undefined && { description }),
+            ...(isActive !== undefined && { isActive }),
+            updatedAt: new Date()
+          }
+        });
+
+        // Update field associations if fieldIds provided
+        if (fieldIds !== undefined && Array.isArray(fieldIds)) {
+          // Delete existing field associations
+          await tx.formField.deleteMany({
+            where: { formId: id }
+          });
+
+          // Create new associations
+          if (fieldIds.length > 0) {
+            await tx.formField.createMany({
+              data: fieldIds.map((fieldId: string, index: number) => ({
+                formId: id,
+                fieldId,
+                order: index
+              }))
+            });
+          }
         }
+
+        // Fetch form with updated fields
+        return await tx.form.findUnique({
+          where: { id },
+          include: {
+            formFields: {
+              include: {
+                field: true
+              },
+              orderBy: {
+                order: 'asc'
+              }
+            }
+          }
+        });
       });
 
       return res.json(form);

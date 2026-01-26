@@ -94,6 +94,11 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
           },
           orderBy: { createdAt: 'desc' },
           take: 50
+        },
+        formResponses: {
+          include: {
+            field: true
+          }
         }
       }
     });
@@ -123,7 +128,10 @@ router.post('/',
     body('priority').optional().isIn(['LOW', 'NORMAL', 'HIGH', 'URGENT']),
     body('categoryId').optional().isUUID(),
     body('formId').optional().isUUID(),
-    body('description').isString().notEmpty()
+    body('description').isString().notEmpty(),
+    body('formResponses').optional().isArray(),
+    body('formResponses.*.fieldId').optional().isUUID(),
+    body('formResponses.*.value').optional().isString()
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -132,41 +140,70 @@ router.post('/',
     }
 
     try {
-      const { subject, channel, priority, categoryId, formId, description } = req.body;
+      const { subject, channel, priority, categoryId, formId, description, formResponses } = req.body;
       const userId = req.userId!;
 
-      // Create ticket with initial comment
-      const ticket = await prisma.ticket.create({
-        data: {
-          subject,
-          channel,
-          priority: priority || 'NORMAL',
-          requesterId: userId,
-          categoryId: categoryId || null,
-          formId: formId || null,
-          comments: {
-            create: {
-              authorId: userId,
-              body: description,
-              bodyPlain: description,
-              channel: 'WEB',
-              isSystem: false
+      // Create ticket with initial comment and form responses in a transaction
+      const ticket = await prisma.$transaction(async (tx) => {
+        const newTicket = await tx.ticket.create({
+          data: {
+            subject,
+            channel,
+            priority: priority || 'NORMAL',
+            requesterId: userId,
+            categoryId: categoryId || null,
+            formId: formId || null,
+            comments: {
+              create: {
+                authorId: userId,
+                body: description,
+                bodyPlain: description,
+                channel: 'WEB',
+                isSystem: false
+              }
+            },
+            activities: {
+              create: {
+                userId,
+                action: 'ticket_created',
+                details: { subject, channel }
+              }
             }
           },
-          activities: {
-            create: {
-              userId,
-              action: 'ticket_created',
-              details: { subject, channel }
+          include: {
+            requester: {
+              select: { id: true, email: true, firstName: true, lastName: true }
+            },
+            comments: true
+          }
+        });
+
+        // Create form responses if provided
+        if (formResponses && Array.isArray(formResponses) && formResponses.length > 0) {
+          await tx.formResponse.createMany({
+            data: formResponses.map((response: { fieldId: string; value: string }) => ({
+              ticketId: newTicket.id,
+              fieldId: response.fieldId,
+              value: response.value
+            }))
+          });
+        }
+
+        // Fetch ticket with form responses
+        return await tx.ticket.findUnique({
+          where: { id: newTicket.id },
+          include: {
+            requester: {
+              select: { id: true, email: true, firstName: true, lastName: true }
+            },
+            comments: true,
+            formResponses: {
+              include: {
+                field: true
+              }
             }
           }
-        },
-        include: {
-          requester: {
-            select: { id: true, email: true, firstName: true, lastName: true }
-          },
-          comments: true
-        }
+        });
       });
 
       return res.status(201).json(ticket);

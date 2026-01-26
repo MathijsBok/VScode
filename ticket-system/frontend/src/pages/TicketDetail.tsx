@@ -288,6 +288,28 @@ const TicketDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* Form Responses */}
+        {ticket.formResponses && ticket.formResponses.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Form Submission Details
+            </h3>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {ticket.formResponses.map((response: any) => (
+                <div key={response.id} className="border-b border-gray-200 dark:border-gray-700 pb-3">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    {response.field.label}
+                    {response.field.required && <span className="text-red-500 ml-1">*</span>}
+                  </dt>
+                  <dd className="text-sm text-gray-900 dark:text-white break-words">
+                    {response.value || <span className="text-gray-400 dark:text-gray-500">-</span>}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+
         {/* Comments/Conversation */}
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Conversation</h3>
