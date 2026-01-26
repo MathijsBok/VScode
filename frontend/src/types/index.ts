@@ -42,6 +42,7 @@ export interface Ticket {
   comments?: Comment[];
   attachments?: Attachment[];
   activities?: TicketActivity[];
+  formResponses?: FormResponse[];
   _count?: {
     comments: number;
   };
@@ -75,16 +76,49 @@ export interface Attachment {
   uploader: User;
 }
 
+// Reusable field library entry
+export interface FormFieldLibrary {
+  id: string;
+  label: string;
+  fieldType: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio';
+  required: boolean;
+  options?: string[];
+  placeholder?: string;
+  defaultValue?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Junction table linking forms to fields with ordering
+export interface FormFieldAssignment {
+  id: string;
+  formId: string;
+  fieldId: string;
+  order: number;
+  field: FormFieldLibrary;
+}
+
+// Form response data stored with tickets
+export interface FormResponse {
+  id: string;
+  ticketId: string;
+  fieldId: string;
+  value: string;
+  createdAt: string;
+  field: FormFieldLibrary;
+}
+
 export interface Form {
   id: string;
   name: string;
   description?: string;
   isActive: boolean;
-  fields: FormField[];
+  formFields: FormFieldAssignment[];
   createdAt: string;
   updatedAt: string;
 }
 
+// Legacy field structure (kept for backward compatibility)
 export interface FormField {
   id: string;
   label: string;

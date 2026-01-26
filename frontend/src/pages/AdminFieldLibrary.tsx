@@ -1,0 +1,477 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
+import { fieldLibraryApi } from '../lib/api';
+import Layout from '../components/Layout';
+import { format } from 'date-fns';
+import { FormFieldLibrary } from '../types';
+
+const AdminFieldLibrary: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [isCreating, setIsCreating] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Form state
+  const [label, setLabel] = useState('');
+  const [fieldType, setFieldType] = useState<'text' | 'textarea' | 'select' | 'checkbox' | 'radio'>('text');
+  const [required, setRequired] = useState(false);
+  const [placeholder, setPlaceholder] = useState('');
+  const [defaultValue, setDefaultValue] = useState('');
+  const [options, setOptions] = useState<string[]>([]);
+  const [optionInput, setOptionInput] = useState('');
+
+  const { data: fields, isLoading } = useQuery({
+    queryKey: ['fieldLibrary'],
+    queryFn: async () => {
+      const response = await fieldLibraryApi.getAll();
+      return response.data as FormFieldLibrary[];
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fieldLibraryApi.create(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Field created successfully');
+      resetForm();
+      queryClient.invalidateQueries({ queryKey: ['fieldLibrary'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to create field');
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fieldLibraryApi.update(id, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Field updated successfully');
+      resetForm();
+      queryClient.invalidateQueries({ queryKey: ['fieldLibrary'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to update field');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await fieldLibraryApi.delete(id);
+    },
+    onSuccess: () => {
+      toast.success('Field deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['fieldLibrary'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to delete field');
+    }
+  });
+
+  const resetForm = () => {
+    setIsCreating(false);
+    setEditingFieldId(null);
+    setLabel('');
+    setFieldType('text');
+    setRequired(false);
+    setPlaceholder('');
+    setDefaultValue('');
+    setOptions([]);
+    setOptionInput('');
+  };
+
+  const handleEdit = (field: FormFieldLibrary) => {
+    setEditingFieldId(field.id);
+    setLabel(field.label);
+    setFieldType(field.fieldType);
+    setRequired(field.required);
+    setPlaceholder(field.placeholder || '');
+    setDefaultValue(field.defaultValue || '');
+    setOptions(field.options || []);
+    setIsCreating(false);
+  };
+
+  const handleAddOption = () => {
+    if (optionInput.trim()) {
+      setOptions([...options, optionInput.trim()]);
+      setOptionInput('');
+    }
+  };
+
+  const handleRemoveOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!label.trim()) {
+      toast.error('Field label is required');
+      return;
+    }
+
+    // Validate options for select/radio/checkbox
+    if (['select', 'radio', 'checkbox'].includes(fieldType) && options.length === 0) {
+      toast.error(`${fieldType} fields require at least one option`);
+      return;
+    }
+
+    const fieldData = {
+      label,
+      fieldType,
+      required,
+      placeholder: placeholder || undefined,
+      defaultValue: defaultValue || undefined,
+      options: ['select', 'radio', 'checkbox'].includes(fieldType) ? options : undefined
+    };
+
+    if (editingFieldId) {
+      updateMutation.mutate({ id: editingFieldId, data: fieldData });
+    } else {
+      createMutation.mutate(fieldData);
+    }
+  };
+
+  const isFormOpen = isCreating || editingFieldId !== null;
+  const requiresOptions = ['select', 'radio', 'checkbox'].includes(fieldType);
+
+  // Filter fields based on search query
+  const filteredFields = fields?.filter(field =>
+    field.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    field.fieldType.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Field Library</h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              Create and manage reusable form fields
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              if (isFormOpen) {
+                resetForm();
+              } else {
+                setIsCreating(true);
+              }
+            }}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            {isFormOpen ? 'Cancel' : 'New Field'}
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        {!isFormOpen && fields && fields.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search fields by name or type..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <svg
+                className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        )}
+
+        {/* Create/Edit Form */}
+        {isFormOpen && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {editingFieldId ? 'Edit Field' : 'Create New Field'}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Field Label <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="e.g., Email Address"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Field Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={fieldType}
+                    onChange={(e) => setFieldType(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="text">Text</option>
+                    <option value="textarea">Textarea</option>
+                    <option value="select">Select</option>
+                    <option value="checkbox">Checkbox</option>
+                    <option value="radio">Radio</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Placeholder
+                  </label>
+                  <input
+                    type="text"
+                    value={placeholder}
+                    onChange={(e) => setPlaceholder(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="e.g., Enter your email"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Default Value
+                  </label>
+                  <input
+                    type="text"
+                    value={defaultValue}
+                    onChange={(e) => setDefaultValue(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Optional default value"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={required}
+                    onChange={(e) => setRequired(e.target.checked)}
+                    className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Required Field
+                  </span>
+                </label>
+              </div>
+
+              {/* Options for Select/Radio/Checkbox */}
+              {requiresOptions && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Options <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={optionInput}
+                        onChange={(e) => setOptionInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddOption();
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Enter option and press Enter or click Add"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddOption}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 text-sm font-medium"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    {options.length > 0 && (
+                      <div className="space-y-1">
+                        {options.map((option, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                            <span className="flex-1 text-sm text-gray-900 dark:text-white">{option}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveOption(index)}
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {options.length === 0 && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        No options added yet. Add at least one option for {fieldType} fields.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary text-sm font-medium disabled:opacity-50 transition-colors"
+                >
+                  {(createMutation.isPending || updateMutation.isPending)
+                    ? (editingFieldId ? 'Updating...' : 'Creating...')
+                    : (editingFieldId ? 'Update Field' : 'Create Field')
+                  }
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
+
+        {/* Fields List */}
+        {filteredFields && filteredFields.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Label
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Required
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Options
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredFields.map((field) => (
+                  <tr key={field.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      {field.label}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {field.fieldType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {field.required ? (
+                        <span className="text-red-600 dark:text-red-400">Yes</span>
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400">No</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      {field.options && field.options.length > 0 ? (
+                        <span>{field.options.length} options</span>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {format(new Date(field.createdAt), 'MMM d, yyyy')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                      <button
+                        onClick={() => handleEdit(field)}
+                        className="text-primary hover:text-primary-dark dark:hover:text-primary-light"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to delete this field? This action cannot be undone if the field is not in use.')) {
+                            deleteMutation.mutate(field.id);
+                          }
+                        }}
+                        className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {fields && fields.length === 0 && !isFormOpen && (
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No fields</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Get started by creating reusable form fields.
+            </p>
+          </div>
+        )}
+
+        {/* No Results State */}
+        {filteredFields && filteredFields.length === 0 && searchQuery && (
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No results found</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Try adjusting your search query.
+            </p>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default AdminFieldLibrary;

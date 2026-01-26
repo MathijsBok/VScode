@@ -45,24 +45,24 @@ enum CommentChannel {
 }
 
 model User {
-  id                String    @id @default(uuid()) @db.Uuid
-  clerkId           String    @unique
-  email             String    @unique
-  firstName         String?
-  lastName          String?
-  role              UserRole  @default(USER)
-  organizationId    String?   @db.Uuid
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id             String   @id @default(uuid()) @db.Uuid
+  clerkId        String   @unique
+  email          String   @unique
+  firstName      String?
+  lastName       String?
+  role           UserRole @default(USER)
+  organizationId String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  organization      Organization?     @relation(fields: [organizationId], references: [id])
-  ticketsCreated    Ticket[]          @relation("TicketRequester")
-  ticketsAssigned   Ticket[]          @relation("TicketAssignee")
-  comments          Comment[]
-  attachments       Attachment[]
-  agentSessions     AgentSession[]
-  timeEntries       TicketTimeEntry[]
-  activities        TicketActivity[]  @relation("UserActivities")
+  organization    Organization?     @relation(fields: [organizationId], references: [id])
+  ticketsCreated  Ticket[]          @relation("TicketRequester")
+  ticketsAssigned Ticket[]          @relation("TicketAssignee")
+  comments        Comment[]
+  attachments     Attachment[]
+  agentSessions   AgentSession[]
+  timeEntries     TicketTimeEntry[]
+  activities      TicketActivity[]  @relation("UserActivities")
 
   @@index([clerkId])
   @@index([email])
@@ -75,37 +75,38 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  tickets   Ticket[]
+  users   User[]
+  tickets Ticket[]
 }
 
 model Ticket {
-  id              String          @id @default(uuid()) @db.Uuid
-  ticketNumber    Int             @unique @default(autoincrement())
-  subject         String          @db.VarChar(500)
-  status          TicketStatus    @default(NEW)
-  priority        TicketPriority  @default(NORMAL)
+  id              String         @id @default(uuid()) @db.Uuid
+  ticketNumber    Int            @unique @default(autoincrement())
+  subject         String         @db.VarChar(500)
+  status          TicketStatus   @default(NEW)
+  priority        TicketPriority @default(NORMAL)
   channel         TicketChannel
-  requesterId     String          @db.Uuid
-  assigneeId      String?         @db.Uuid
-  organizationId  String?         @db.Uuid
-  formId          String?         @db.Uuid
-  categoryId      String?         @db.Uuid
+  requesterId     String         @db.Uuid
+  assigneeId      String?        @db.Uuid
+  organizationId  String?        @db.Uuid
+  formId          String?        @db.Uuid
+  categoryId      String?        @db.Uuid
   dueAt           DateTime?
   firstResponseAt DateTime?
   solvedAt        DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  requester       User            @relation("TicketRequester", fields: [requesterId], references: [id])
-  assignee        User?           @relation("TicketAssignee", fields: [assigneeId], references: [id])
-  organization    Organization?   @relation(fields: [organizationId], references: [id])
-  form            Form?           @relation(fields: [formId], references: [id])
-  category        Category?       @relation(fields: [categoryId], references: [id])
-  comments        Comment[]
-  attachments     Attachment[]
-  activities      TicketActivity[]
-  timeEntries     TicketTimeEntry[]
+  requester     User              @relation("TicketRequester", fields: [requesterId], references: [id])
+  assignee      User?             @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  organization  Organization?     @relation(fields: [organizationId], references: [id])
+  form          Form?             @relation(fields: [formId], references: [id])
+  category      Category?         @relation(fields: [categoryId], references: [id])
+  comments      Comment[]
+  attachments   Attachment[]
+  activities    TicketActivity[]
+  timeEntries   TicketTimeEntry[]
+  formResponses FormResponse[]
 
   @@index([ticketNumber], name: "idx_tickets_number")
   @@index([status], name: "idx_tickets_status")
@@ -116,19 +117,19 @@ model Ticket {
 }
 
 model Comment {
-  id          String         @id @default(uuid()) @db.Uuid
-  ticketId    String         @db.Uuid
-  authorId    String         @db.Uuid
-  body        String         @db.Text
-  bodyPlain   String         @db.Text
-  isInternal  Boolean        @default(false)
-  isSystem    Boolean        @default(false)
-  channel     CommentChannel
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id         String         @id @default(uuid()) @db.Uuid
+  ticketId   String         @db.Uuid
+  authorId   String         @db.Uuid
+  body       String         @db.Text
+  bodyPlain  String         @db.Text
+  isInternal Boolean        @default(false)
+  isSystem   Boolean        @default(false)
+  channel    CommentChannel
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 
-  ticket      Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  author      User           @relation(fields: [authorId], references: [id])
+  ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User         @relation(fields: [authorId], references: [id])
   attachments Attachment[]
 
   @@index([ticketId], name: "idx_comments_ticket")
@@ -137,19 +138,19 @@ model Comment {
 }
 
 model Attachment {
-  id          String   @id @default(uuid()) @db.Uuid
-  ticketId    String   @db.Uuid
-  commentId   String?  @db.Uuid
-  uploaderId  String   @db.Uuid
-  filename    String   @db.VarChar(255)
-  filePath    String   @db.VarChar(500)
-  fileSize    BigInt
-  mimeType    String   @db.VarChar(100)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  ticketId   String   @db.Uuid
+  commentId  String?  @db.Uuid
+  uploaderId String   @db.Uuid
+  filename   String   @db.VarChar(255)
+  filePath   String   @db.VarChar(500)
+  fileSize   BigInt
+  mimeType   String   @db.VarChar(100)
+  createdAt  DateTime @default(now())
 
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  comment     Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  uploader    User     @relation(fields: [uploaderId], references: [id])
+  ticket   Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  comment  Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  uploader User     @relation(fields: [uploaderId], references: [id])
 
   @@index([ticketId], name: "idx_attachments_ticket")
   @@index([commentId], name: "idx_attachments_comment")
@@ -162,31 +163,32 @@ model Category {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tickets     Ticket[]
+  tickets Ticket[]
 }
 
 model Form {
-  id          String      @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid()) @db.Uuid
   name        String
   description String?
-  isActive    Boolean     @default(true)
-  fields      Json        // JSON array of form field definitions
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  isActive    Boolean  @default(true)
+  fields      Json? // JSON array of form field definitions (kept for migration)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  tickets     Ticket[]
+  tickets    Ticket[]
+  formFields FormField[]
 }
 
 model TicketActivity {
-  id          String   @id @default(uuid()) @db.Uuid
-  ticketId    String   @db.Uuid
-  userId      String?  @db.Uuid
-  action      String   // e.g., "status_changed", "assigned", "comment_added"
-  details     Json     // Additional activity details
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid()) @db.Uuid
+  ticketId  String   @db.Uuid
+  userId    String?  @db.Uuid
+  action    String // e.g., "status_changed", "assigned", "comment_added"
+  details   Json // Additional activity details
+  createdAt DateTime @default(now())
 
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  user        User?    @relation("UserActivities", fields: [userId], references: [id])
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User?  @relation("UserActivities", fields: [userId], references: [id])
 
   @@index([ticketId])
   @@index([userId])
@@ -194,16 +196,16 @@ model TicketActivity {
 }
 
 model AgentSession {
-  id          String    @id @default(uuid()) @db.Uuid
-  agentId     String    @db.Uuid
-  loginAt     DateTime  @default(now())
-  logoutAt    DateTime?
-  duration    Int?      // Duration in seconds
-  replyCount  Int       @default(0)
-  ipAddress   String?
-  userAgent   String?
+  id         String    @id @default(uuid()) @db.Uuid
+  agentId    String    @db.Uuid
+  loginAt    DateTime  @default(now())
+  logoutAt   DateTime?
+  duration   Int? // Duration in seconds
+  replyCount Int       @default(0)
+  ipAddress  String?
+  userAgent  String?
 
-  agent       User      @relation(fields: [agentId], references: [id])
+  agent User @relation(fields: [agentId], references: [id])
 
   @@index([agentId])
   @@index([loginAt])
@@ -215,15 +217,60 @@ model TicketTimeEntry {
   agentId     String    @db.Uuid
   startedAt   DateTime  @default(now())
   endedAt     DateTime?
-  duration    Int?      // Duration in seconds
-  description String?   // Optional note about what was done
+  duration    Int? // Duration in seconds
+  description String? // Optional note about what was done
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  agent       User      @relation(fields: [agentId], references: [id])
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agent  User   @relation(fields: [agentId], references: [id])
 
   @@index([ticketId])
   @@index([agentId])
   @@index([startedAt])
+}
+
+model FormFieldLibrary {
+  id           String   @id @default(uuid()) @db.Uuid
+  label        String   @db.VarChar(255)
+  fieldType    String   @db.VarChar(50)
+  required     Boolean  @default(false)
+  options      Json?
+  placeholder  String?  @db.VarChar(255)
+  defaultValue String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  formFields    FormField[]
+  formResponses FormResponse[]
+
+  @@index([fieldType])
+}
+
+model FormField {
+  id      String @id @default(uuid()) @db.Uuid
+  formId  String @db.Uuid
+  fieldId String @db.Uuid
+  order   Int
+
+  form  Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
+  field FormFieldLibrary @relation(fields: [fieldId], references: [id])
+
+  @@unique([formId, fieldId])
+  @@index([formId])
+  @@index([fieldId])
+}
+
+model FormResponse {
+  id        String   @id @default(uuid()) @db.Uuid
+  ticketId  String   @db.Uuid
+  fieldId   String   @db.Uuid
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+
+  ticket Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  field  FormFieldLibrary @relation(fields: [fieldId], references: [id])
+
+  @@index([ticketId])
+  @@index([fieldId])
 }
