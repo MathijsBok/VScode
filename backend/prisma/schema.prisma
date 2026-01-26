@@ -171,6 +171,7 @@ model Form {
   name        String
   description String?
   isActive    Boolean  @default(true)
+  order       Int      @default(0)
   fields      Json? // JSON array of form field definitions (kept for migration)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

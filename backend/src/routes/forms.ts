@@ -10,7 +10,7 @@ router.get('/', requireAuth, async (_req: AuthRequest, res: Response) => {
   try {
     const forms = await prisma.form.findMany({
       where: { isActive: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { order: 'asc' },
       include: {
         formFields: {
           include: {
@@ -27,6 +27,32 @@ router.get('/', requireAuth, async (_req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Error fetching forms:', error);
     return res.status(500).json({ error: 'Failed to fetch forms' });
+  }
+});
+
+// Reorder forms (admin only) - MUST be before /:id routes
+router.patch('/reorder', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { formIds } = req.body;
+
+    if (!Array.isArray(formIds)) {
+      return res.status(400).json({ error: 'formIds must be an array' });
+    }
+
+    // Update order for each form
+    await prisma.$transaction(
+      formIds.map((id: string, index: number) =>
+        prisma.form.update({
+          where: { id },
+          data: { order: index }
+        })
+      )
+    );
+
+    return res.json({ message: 'Forms reordered successfully' });
+  } catch (error) {
+    console.error('Error reordering forms:', error);
+    return res.status(500).json({ error: 'Failed to reorder forms' });
   }
 });
 

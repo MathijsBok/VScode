@@ -9,8 +9,6 @@ import { Form } from '../types';
 
 const CreateTicket: React.FC = () => {
   const navigate = useNavigate();
-  const [subject, setSubject] = useState('');
-  const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('NORMAL');
   const [categoryId, _setCategoryId] = useState('');
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
@@ -86,16 +84,28 @@ const CreateTicket: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!subject.trim() || !description.trim()) {
-      toast.error('Please fill in all required fields');
+    // Require form selection
+    if (!selectedFormId) {
+      toast.error('Please select a form to continue');
       return;
     }
 
-    // Validate form fields if a form is selected
-    if (selectedFormId && !validateFormFields()) {
+    // Validate form fields
+    if (!validateFormFields()) {
       toast.error('Please fill in all required form fields');
       return;
     }
+
+    // Find Subject and Description from form fields
+    const subjectField = selectedForm?.formFields?.find(ff =>
+      ff.field.label.toLowerCase() === 'subject'
+    );
+    const descriptionField = selectedForm?.formFields?.find(ff =>
+      ff.field.label.toLowerCase() === 'description'
+    );
+
+    const subject = subjectField ? formValues[subjectField.fieldId] : '';
+    const description = descriptionField ? formValues[descriptionField.fieldId] : '';
 
     // Prepare form responses if a form is selected
     const formResponses = selectedFormId && selectedForm
@@ -106,8 +116,8 @@ const CreateTicket: React.FC = () => {
       : undefined;
 
     createMutation.mutate({
-      subject,
-      description,
+      subject: subject || 'No subject provided',
+      description: description || 'No description provided',
       channel: 'WEB',
       priority,
       categoryId: categoryId || undefined,
@@ -139,23 +149,24 @@ const CreateTicket: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Optional Form Selection */}
+          {/* Form Selection - REQUIRED */}
           {forms && forms.length > 0 && (
             <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Form Template (Optional)
+                Select Request Type <span className="text-red-500">*</span>
               </h2>
               <div>
                 <label htmlFor="formId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select a form to help us better understand your request
+                  Please select the type of request you want to submit
                 </label>
                 <select
                   id="formId"
                   value={selectedFormId || ''}
                   onChange={(e) => handleFormSelection(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  required
                 >
-                  <option value="">No Form (Skip)</option>
+                  <option value="">-- Select a form --</option>
                   {forms.map((form) => (
                     <option key={form.id} value={form.id}>
                       {form.name}
@@ -163,63 +174,101 @@ const CreateTicket: React.FC = () => {
                   ))}
                 </select>
               </div>
+            </div>
+          )}
 
-              {/* Show form description and fields if a form is selected */}
-              {selectedForm && (
-                <div className="mt-4">
-                  {selectedForm.description && (
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                      <p className="text-sm text-blue-800 dark:text-blue-200">
-                        {selectedForm.description}
-                      </p>
-                    </div>
-                  )}
+          {/* Important Support Information - Only show when no form is selected */}
+          {!selectedFormId && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-600 p-6 rounded-r-lg shadow-sm">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="ml-4 flex-1">
+                  <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
+                    ⚠️ Important Support Information
+                  </h3>
+                  <div className="text-sm text-yellow-700 dark:text-yellow-300 space-y-3">
+                    <p>
+                      Please note that we can only assist with issues directly related to <strong>Klever Wallet</strong> and <strong>Klever Exchange</strong>.
+                      Requests submitted under the correct category will be processed faster.
+                    </p>
 
-                  {selectedForm.formFields && selectedForm.formFields.length > 0 && (
-                    <div className="mt-4">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                        Form Fields
-                      </h3>
-                      <FormRenderer
-                        fields={selectedForm.formFields.sort((a, b) => a.order - b.order)}
-                        values={formValues}
-                        onChange={handleFormFieldChange}
-                        errors={formErrors}
-                      />
+                    <div>
+                      <p className="font-semibold mb-1">⏱ Processing Time</p>
+                      <p>Requests are generally processed within 1–12 hours.</p>
                     </div>
-                  )}
+
+                    <div>
+                      <p className="font-semibold mb-1">🏷 Request Category</p>
+                      <p>If your request is related to the <strong>EXCHANGE</strong> or <strong>WALLET</strong>, please clearly mention this in your message.</p>
+                    </div>
+
+                    <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-3 mt-3">
+                      <p className="font-semibold text-red-800 dark:text-red-200 mb-2">🔐 Security Notice</p>
+                      <p className="text-red-700 dark:text-red-300 mb-2">KLEVER will NEVER ask you to:</p>
+                      <ul className="list-disc list-inside space-y-1 text-red-700 dark:text-red-300 ml-2">
+                        <li>Transfer funds to any address</li>
+                        <li>Share private information of any kind</li>
+                      </ul>
+                      <p className="text-red-700 dark:text-red-300 mt-2 font-medium">If anyone asks you to do so, this is a scam.</p>
+
+                      <p className="font-semibold text-red-800 dark:text-red-200 mt-3 mb-1">🚫 Never Share:</p>
+                      <ul className="list-disc list-inside space-y-1 text-red-700 dark:text-red-300 ml-2">
+                        <li>Your private key</li>
+                        <li>Your mnemonic / recovery phrase</li>
+                        <li>Any other sensitive personal information</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <p className="font-semibold mb-1">🌍 Supported Languages</p>
+                      <p>English (fastest support), German, Hindi, Persian, Dutch</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Show form description and fields if a form is selected */}
+          {selectedForm && (
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              {selectedForm.description && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    {selectedForm.description}
+                  </p>
+                </div>
+              )}
+
+              {selectedForm.formFields && selectedForm.formFields.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Request Details
+                  </h3>
+                  <FormRenderer
+                    fields={selectedForm.formFields.sort((a, b) => a.order - b.order)}
+                    values={formValues}
+                    onChange={handleFormFieldChange}
+                    errors={formErrors}
+                  />
                 </div>
               )}
             </div>
           )}
 
-          {/* Standard Fields (Always Visible) */}
-          <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Ticket Information
-            </h2>
-
-            <div className="space-y-4">
-              {/* Subject */}
-              <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Subject <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="subject"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Brief description of your issue"
-                  required
-                />
-              </div>
-
-              {/* Priority */}
+          {/* Priority Selection (Only visible when form is selected) */}
+          {selectedFormId && (
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Priority Level
+              </h2>
               <div>
                 <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Priority
+                  How urgent is your request?
                 </label>
                 <select
                   id="priority"
@@ -227,48 +276,34 @@ const CreateTicket: React.FC = () => {
                   onChange={(e) => setPriority(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="LOW">Low</option>
-                  <option value="NORMAL">Normal</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
+                  <option value="LOW">Low - General inquiry</option>
+                  <option value="NORMAL">Normal - Standard request</option>
+                  <option value="HIGH">High - Important issue</option>
+                  <option value="URGENT">Urgent - Critical problem</option>
                 </select>
               </div>
-
-              {/* Description */}
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Provide detailed information about your request"
-                  required
-                />
-              </div>
             </div>
-          </div>
+          )}
 
-          {/* Form actions */}
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {createMutation.isPending ? 'Creating...' : 'Create Ticket'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/user')}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
+          {/* Form actions - Only show after form is selected */}
+          {selectedFormId && (
+            <div className="flex gap-4">
+              <button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {createMutation.isPending ? 'Creating...' : 'Create Ticket'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/user')}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </Layout>
