@@ -95,6 +95,7 @@ export interface FormFieldAssignment {
   formId: string;
   fieldId: string;
   order: number;
+  required: boolean;
   field: FormFieldLibrary;
 }
 

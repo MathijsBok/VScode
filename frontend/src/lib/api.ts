@@ -133,7 +133,7 @@ export const formApi = {
   create: (data: {
     name: string;
     description?: string;
-    fieldIds?: string[];
+    fields?: Array<{ fieldId: string; required: boolean }>;
     isActive?: boolean;
   }) =>
     api.post('/forms', data),
@@ -141,7 +141,7 @@ export const formApi = {
   update: (id: string, data: {
     name?: string;
     description?: string;
-    fieldIds?: string[];
+    fields?: Array<{ fieldId: string; required: boolean }>;
     isActive?: boolean;
   }) =>
     api.patch(`/forms/${id}`, data),
