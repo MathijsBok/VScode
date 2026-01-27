@@ -332,7 +332,8 @@ const AdminDashboard: React.FC = () => {
       OPEN: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       ON_HOLD: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      SOLVED: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+      SOLVED: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      CLOSED: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     };
     return colors[status] || colors.NEW;
   };
@@ -356,7 +357,8 @@ const AdminDashboard: React.FC = () => {
     { value: 'OPEN', label: 'Open' },
     { value: 'PENDING', label: 'Pending' },
     { value: 'ON_HOLD', label: 'On Hold' },
-    { value: 'SOLVED', label: 'Solved' }
+    { value: 'SOLVED', label: 'Solved' },
+    { value: 'CLOSED', label: 'Closed' }
   ];
 
   // Helper to get the correct stats key for a status value
@@ -530,20 +532,23 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Status</h3>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                {Object.entries(systemStats.tickets.byStatus).map(([status, count]) => {
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                {(['NEW', 'OPEN', 'PENDING', 'ON_HOLD', 'SOLVED', 'CLOSED'] as const).map((status) => {
                   const statusColors: Record<string, { bg: string, text: string, border: string }> = {
                     NEW: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
                     OPEN: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-300', border: 'border-green-200 dark:border-green-800' },
                     PENDING: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-300', border: 'border-yellow-200 dark:border-yellow-800' },
                     ON_HOLD: { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-200 dark:border-orange-800' },
-                    SOLVED: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' }
+                    SOLVED: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
+                    CLOSED: { bg: 'bg-gray-50 dark:bg-gray-900/20', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-200 dark:border-gray-700' }
                   };
-                  const colors = statusColors[status] || statusColors.NEW;
+                  const colors = statusColors[status];
+                  const statusKey = status === 'ON_HOLD' ? 'onHold' : status.toLowerCase();
+                  const count = (systemStats.tickets.byStatus as Record<string, number>)[statusKey] || 0;
 
                   return (
-                    <div key={status} className={`${colors.bg} ${colors.border} border rounded-xl p-4 text-center transition-transform hover:scale-105`}>
-                      <div className={`text-3xl font-bold ${colors.text} mb-1`}>{count as number}</div>
+                    <div key={status} className={`${colors.bg} ${colors.border} border rounded-xl p-3 text-center transition-transform hover:scale-105`}>
+                      <div className={`text-2xl font-bold ${colors.text} mb-1`}>{count}</div>
                       <div className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">{status.replace('_', ' ')}</div>
                     </div>
                   );
@@ -1036,11 +1041,20 @@ const AdminDashboard: React.FC = () => {
                       </th>
                       <th
                         onClick={() => handleSort('ticketNumber')}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                       >
                         <div className="flex items-center">
                           Ticket #
                           <SortIcon field="ticketNumber" />
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort('status')}
+                        className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <div className="flex items-center">
+                          Status
+                          <SortIcon field="status" />
                         </div>
                       </th>
                       <th
@@ -1059,15 +1073,6 @@ const AdminDashboard: React.FC = () => {
                         <div className="flex items-center">
                           Requester
                           <SortIcon field="requester" />
-                        </div>
-                      </th>
-                      <th
-                        onClick={() => handleSort('status')}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                      >
-                        <div className="flex items-center">
-                          Status
-                          <SortIcon field="status" />
                         </div>
                       </th>
                       <th
@@ -1122,6 +1127,14 @@ const AdminDashboard: React.FC = () => {
                         </td>
                         <td
                           onClick={() => navigate(`/tickets/${ticket.id}`)}
+                          className="px-6 py-2 whitespace-nowrap cursor-pointer"
+                        >
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
+                            {ticket.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td
+                          onClick={() => navigate(`/tickets/${ticket.id}`)}
                           className="px-6 py-2 text-sm text-gray-900 dark:text-white cursor-pointer"
                         >
                           {ticket.subject}
@@ -1130,15 +1143,7 @@ const AdminDashboard: React.FC = () => {
                           onClick={() => navigate(`/tickets/${ticket.id}`)}
                           className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 cursor-pointer"
                         >
-                          {ticket.requester.email}
-                        </td>
-                        <td
-                          onClick={() => navigate(`/tickets/${ticket.id}`)}
-                          className="px-6 py-2 whitespace-nowrap cursor-pointer"
-                        >
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
-                            {ticket.status.replace('_', ' ')}
-                          </span>
+                          {ticket.requester.name || ticket.requester.email}
                         </td>
                         <td
                           onClick={() => navigate(`/tickets/${ticket.id}`)}

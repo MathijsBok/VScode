@@ -303,7 +303,7 @@ const TicketDetail: React.FC = () => {
             <h2 className="text-xl text-gray-700 dark:text-gray-300">{ticket.subject}</h2>
 
             {/* Create Follow-up Ticket Button */}
-            {(ticket.status === 'SOLVED' || ticket.status === 'CLOSED') && (
+            {ticket.status === 'CLOSED' && (
               <Link
                 to={`/tickets/new?relatedTicketId=${ticket.id}`}
                 className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
@@ -333,9 +333,11 @@ const TicketDetail: React.FC = () => {
                       : 'This ticket has been solved for more than 48 hours and is closed for replies.'
                     }
                   </p>
-                  <p className="text-sm text-orange-700 dark:text-orange-400">
-                    If you need further assistance on the same subject, please create a follow-up ticket using the button above.
-                  </p>
+                  {ticket.status === 'CLOSED' && (
+                    <p className="text-sm text-orange-700 dark:text-orange-400">
+                      If you need further assistance on the same subject, please create a follow-up ticket using the button above.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -508,20 +510,22 @@ const TicketDetail: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Need further assistance on the same subject? Create a follow-up ticket.
-                </p>
-                <Link
-                  to={`/tickets/new?relatedTicketId=${ticket.id}`}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Create Follow-up Ticket
-                </Link>
-              </div>
+              {ticket.status === 'CLOSED' && (
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Need further assistance on the same subject? Create a follow-up ticket.
+                  </p>
+                  <Link
+                    to={`/tickets/new?relatedTicketId=${ticket.id}`}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Follow-up Ticket
+                  </Link>
+                </div>
+              )}
             </div>
           ) : (
             <form onSubmit={handleReply} className="space-y-4">

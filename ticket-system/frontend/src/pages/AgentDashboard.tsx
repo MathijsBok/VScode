@@ -161,8 +161,8 @@ const AgentDashboard: React.FC = () => {
           bValue = b.subject.toLowerCase();
           break;
         case 'requester':
-          aValue = a.requester.email.toLowerCase();
-          bValue = b.requester.email.toLowerCase();
+          aValue = (a.requester.name || a.requester.email).toLowerCase();
+          bValue = (b.requester.name || b.requester.email).toLowerCase();
           break;
         case 'status':
           aValue = a.status;
@@ -283,7 +283,8 @@ const AgentDashboard: React.FC = () => {
       OPEN: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       ON_HOLD: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      SOLVED: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+      SOLVED: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      CLOSED: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     };
     return colors[status] || colors.NEW;
   };
@@ -294,7 +295,8 @@ const AgentDashboard: React.FC = () => {
     { value: 'OPEN', label: 'Open' },
     { value: 'PENDING', label: 'Pending' },
     { value: 'ON_HOLD', label: 'On Hold' },
-    { value: 'SOLVED', label: 'Solved' }
+    { value: 'SOLVED', label: 'Solved' },
+    { value: 'CLOSED', label: 'Closed' }
   ];
 
   // Helper to get the correct stats key for a status value
@@ -583,11 +585,20 @@ const AgentDashboard: React.FC = () => {
                   </th>
                   <th
                     onClick={() => handleSort('ticketNumber')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
                     <div className="flex items-center">
                       Ticket #
                       <SortIcon field="ticketNumber" />
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('status')}
+                    className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <div className="flex items-center">
+                      Status
+                      <SortIcon field="status" />
                     </div>
                   </th>
                   <th
@@ -606,15 +617,6 @@ const AgentDashboard: React.FC = () => {
                     <div className="flex items-center">
                       Requester
                       <SortIcon field="requester" />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('status')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      Status
-                      <SortIcon field="status" />
                     </div>
                   </th>
                   <th
@@ -669,6 +671,14 @@ const AgentDashboard: React.FC = () => {
                     </td>
                     <td
                       onClick={() => navigate(`/tickets/${ticket.id}`)}
+                      className="px-6 py-2 whitespace-nowrap cursor-pointer"
+                    >
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
+                        {ticket.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td
+                      onClick={() => navigate(`/tickets/${ticket.id}`)}
                       className="px-6 py-2 text-sm text-gray-900 dark:text-white cursor-pointer"
                     >
                       {ticket.subject}
@@ -677,15 +687,7 @@ const AgentDashboard: React.FC = () => {
                       onClick={() => navigate(`/tickets/${ticket.id}`)}
                       className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 cursor-pointer"
                     >
-                      {ticket.requester.email}
-                    </td>
-                    <td
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 whitespace-nowrap cursor-pointer"
-                    >
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
-                        {ticket.status.replace('_', ' ')}
-                      </span>
+                      {ticket.requester.name || ticket.requester.email}
                     </td>
                     <td
                       onClick={() => navigate(`/tickets/${ticket.id}`)}
