@@ -449,13 +449,14 @@ router.get('/stats/overview', requireAuth, requireAgent, async (req: AuthRequest
 
     const where = userRole === 'AGENT' ? { assigneeId: userId } : {};
 
-    const [total, newCount, openCount, pendingCount, onHoldCount, solvedCount] = await Promise.all([
+    const [total, newCount, openCount, pendingCount, onHoldCount, solvedCount, closedCount] = await Promise.all([
       prisma.ticket.count({ where }),
       prisma.ticket.count({ where: { ...where, status: 'NEW' } }),
       prisma.ticket.count({ where: { ...where, status: 'OPEN' } }),
       prisma.ticket.count({ where: { ...where, status: 'PENDING' } }),
       prisma.ticket.count({ where: { ...where, status: 'ON_HOLD' } }),
-      prisma.ticket.count({ where: { ...where, status: 'SOLVED' } })
+      prisma.ticket.count({ where: { ...where, status: 'SOLVED' } }),
+      prisma.ticket.count({ where: { ...where, status: 'CLOSED' } })
     ]);
 
     return res.json({
@@ -465,7 +466,8 @@ router.get('/stats/overview', requireAuth, requireAgent, async (req: AuthRequest
         open: openCount,
         pending: pendingCount,
         onHold: onHoldCount,
-        solved: solvedCount
+        solved: solvedCount,
+        closed: closedCount
       }
     });
   } catch (error) {

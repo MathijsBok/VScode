@@ -215,6 +215,15 @@ const UserDashboard: React.FC = () => {
                           </div>
                         </th>
                         <th
+                          onClick={() => handleSort('status')}
+                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <div className="flex items-center">
+                            Status
+                            <SortIcon field="status" />
+                          </div>
+                        </th>
+                        <th
                           onClick={() => handleSort('subject')}
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
@@ -242,7 +251,7 @@ const UserDashboard: React.FC = () => {
                           </div>
                         </th>
                         <th className="w-52 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Status
+                          Last Updated
                         </th>
                         <th
                           onClick={() => handleSort('comments')}
@@ -265,6 +274,11 @@ const UserDashboard: React.FC = () => {
                           <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-primary">
                             #{ticket.ticketNumber}
                           </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
+                              {ticket.status.replace('_', ' ')}
+                            </span>
+                          </td>
                           <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
                             {ticket.subject}
                           </td>
@@ -274,10 +288,8 @@ const UserDashboard: React.FC = () => {
                           <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {format(new Date(ticket.createdAt), 'MMM d, yyyy')}
                           </td>
-                          <td className="px-6 py-2 whitespace-nowrap">
-                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
-                              {ticket.status.replace('_', ' ')}
-                            </span>
+                          <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {format(new Date(ticket.updatedAt), 'MMM d, yyyy')}
                           </td>
                           <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {ticket._count.comments}
@@ -337,6 +349,15 @@ const UserDashboard: React.FC = () => {
                           </div>
                         </th>
                         <th
+                          onClick={() => handleSort('status')}
+                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <div className="flex items-center">
+                            Status
+                            <SortIcon field="status" />
+                          </div>
+                        </th>
+                        <th
                           onClick={() => handleSort('subject')}
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
@@ -386,6 +407,11 @@ const UserDashboard: React.FC = () => {
                         >
                           <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-primary">
                             #{ticket.ticketNumber}
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
+                              {ticket.status.replace('_', ' ')}
+                            </span>
                           </td>
                           <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
                             {ticket.subject}
@@ -457,6 +483,15 @@ const UserDashboard: React.FC = () => {
                           </div>
                         </th>
                         <th
+                          onClick={() => handleSort('status')}
+                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <div className="flex items-center">
+                            Status
+                            <SortIcon field="status" />
+                          </div>
+                        </th>
+                        <th
                           onClick={() => handleSort('subject')}
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
@@ -506,6 +541,11 @@ const UserDashboard: React.FC = () => {
                         >
                           <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-primary">
                             #{ticket.ticketNumber}
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
+                              {ticket.status.replace('_', ' ')}
+                            </span>
                           </td>
                           <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
                             {ticket.subject}
