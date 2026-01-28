@@ -180,7 +180,8 @@ const CreateTicket: React.FC = () => {
       categoryId: categoryId || undefined,
       formId: selectedFormId || undefined,
       formResponses,
-      relatedTicketId: relatedTicketId || undefined
+      relatedTicketId: relatedTicketId || undefined,
+      userAgent: navigator.userAgent
     });
   };
 
@@ -386,7 +387,7 @@ const CreateTicket: React.FC = () => {
                           <span className="font-semibold">Click to upload</span> or drag and drop
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          PNG, JPG, GIF, WEBP, SVG, MP4, WEBM, MOV (Max 10MB each)
+                          PNG, JPG, GIF, WEBP, SVG, MP4, WEBM, MOV (Max 5MB each)
                         </p>
                       </div>
                       <input

@@ -43,6 +43,9 @@ export interface Ticket {
   dueAt?: string;
   firstResponseAt?: string;
   solvedAt?: string;
+  userAgent?: string;
+  ipAddress?: string;
+  country?: string;
   createdAt: string;
   updatedAt: string;
   requester: User;
