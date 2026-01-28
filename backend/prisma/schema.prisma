@@ -73,6 +73,7 @@ model User {
   notifications   Notification[]
   bugsReported    Bug[]             @relation("BugReporter")
   bugsSolved      Bug[]             @relation("BugSolver")
+  apiKeys         ApiKey[]          @relation("ApiKeyCreator")
 
   @@index([clerkId])
   @@index([email])
@@ -197,6 +198,7 @@ model Form {
 
   tickets    Ticket[]
   formFields FormField[]
+  apiKeys    ApiKey[]
 }
 
 model TicketActivity {
@@ -435,4 +437,27 @@ model Bug {
   @@index([status])
   @@index([reportedById])
   @@index([createdAt])
+}
+
+// API Keys for external integrations
+model ApiKey {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(255)
+  key         String    @unique @db.VarChar(100)
+  keyPrefix   String    @db.VarChar(16) // "klv_" + first 8 chars for display
+  description String?   @db.Text
+  formId      String?   @db.Uuid // Optional: restrict to specific form
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  usageCount  Int       @default(0)
+  createdById String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  form      Form? @relation(fields: [formId], references: [id])
+  createdBy User  @relation("ApiKeyCreator", fields: [createdById], references: [id])
+
+  @@index([key])
+  @@index([isActive])
+  @@index([createdById])
 }

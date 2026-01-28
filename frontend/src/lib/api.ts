@@ -387,3 +387,21 @@ export const exportApi = {
       responseType: 'blob'
     })
 };
+
+// API Key API
+export const apiKeyApi = {
+  getAll: () =>
+    api.get('/api-keys'),
+
+  getForms: () =>
+    api.get('/api-keys/forms'),
+
+  create: (data: { name: string; description?: string; formId?: string }) =>
+    api.post('/api-keys', data),
+
+  revoke: (id: string) =>
+    api.patch(`/api-keys/${id}/revoke`),
+
+  delete: (id: string) =>
+    api.delete(`/api-keys/${id}`)
+};

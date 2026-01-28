@@ -25,6 +25,7 @@ import AdminMacros from './pages/AdminMacros';
 import AdminEmailTemplates from './pages/AdminEmailTemplates';
 import AdminUsers from './pages/AdminUsers';
 import AdminBugs from './pages/AdminBugs';
+import ApiDocs from './pages/ApiDocs';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -228,6 +229,7 @@ function App() {
                     {/* Common Routes */}
                     <Route path="/tickets/new" element={<CreateTicket />} />
                     <Route path="/tickets/:id" element={<TicketDetail />} />
+                    <Route path="/api-docs" element={<ApiDocs />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </SignedIn>
@@ -235,6 +237,7 @@ function App() {
                   <Routes>
                     <Route path="/sign-in/*" element={<LoginPage />} />
                     <Route path="/sign-up/*" element={<SignUpPage />} />
+                    <Route path="/api-docs" element={<ApiDocs />} />
                     <Route path="*" element={<Navigate to="/sign-in" replace />} />
                   </Routes>
                 </SignedOut>

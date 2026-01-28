@@ -29,6 +29,8 @@ import emailTemplateRoutes from './routes/emailTemplates';
 import notificationRoutes from './routes/notifications';
 import bugRoutes from './routes/bugs';
 import exportRoutes from './routes/export';
+import apiKeyRoutes from './routes/apiKeys';
+import externalApiRoutes from './routes/externalApi';
 
 // Import automation jobs
 import { initializeTicketAutomation } from './jobs/ticketAutomation';
@@ -52,6 +54,9 @@ app.use('/webhooks', webhookRoutes);
 app.use(express.json({ limit: '250mb' }));
 app.use(express.urlencoded({ extended: true, limit: '250mb' }));
 
+// External API routes (uses API key auth, before Clerk middleware)
+app.use('/api/v1', externalApiRoutes);
+
 // Clerk authentication middleware
 app.use(clerkMiddleware());
 
@@ -73,6 +78,7 @@ app.use('/api/email-templates', emailTemplateRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/bugs', bugRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

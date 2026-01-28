@@ -1,16 +1,49 @@
 import React, { useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { settingsApi, zendeskApi, exportApi } from '../lib/api';
+import { settingsApi, zendeskApi, exportApi, apiKeyApi } from '../lib/api';
 import Layout from '../components/Layout';
 
-type TabType = 'notifications' | 'automation' | 'import' | 'export';
+type TabType = 'notifications' | 'automation' | 'import' | 'export' | 'api';
+const validTabs: TabType[] = ['notifications', 'automation', 'import', 'export', 'api'];
+
+interface ApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  keyDisplay: string;
+  description: string | null;
+  formId: string | null;
+  isActive: boolean;
+  lastUsedAt: string | null;
+  usageCount: number;
+  createdAt: string;
+  revokedAt: string | null;
+  fullKey?: string;
+  form?: { id: string; name: string } | null;
+  createdBy?: { id: string; email: string; firstName: string | null; lastName: string | null };
+}
+
+interface FormOption {
+  id: string;
+  name: string;
+  description: string | null;
+}
 
 const AdminSettings: React.FC = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const ticketFileInputRef = useRef<HTMLInputElement>(null);
   const userFileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('notifications');
+
+  // Get active tab from URL, default to 'notifications'
+  const tabParam = searchParams.get('tab') as TabType | null;
+  const activeTab: TabType = tabParam && validTabs.includes(tabParam) ? tabParam : 'notifications';
+
+  const setActiveTab = (tab: TabType) => {
+    setSearchParams({ tab });
+  };
   const [isImportingTickets, setIsImportingTickets] = useState(false);
   const [isImportingUsers, setIsImportingUsers] = useState(false);
   const [isResettingSequence, setIsResettingSequence] = useState(false);
@@ -24,6 +57,13 @@ const AdminSettings: React.FC = () => {
   const [ticketExportEndDate, setTicketExportEndDate] = useState('');
   const [userExportStartDate, setUserExportStartDate] = useState('');
   const [userExportEndDate, setUserExportEndDate] = useState('');
+  // API Key state
+  const [showCreateKeyModal, setShowCreateKeyModal] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyDescription, setNewKeyDescription] = useState('');
+  const [newKeyFormId, setNewKeyFormId] = useState('');
+  const [createdKey, setCreatedKey] = useState<ApiKey | null>(null);
+  const [copiedKey, setCopiedKey] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -32,6 +72,89 @@ const AdminSettings: React.FC = () => {
       return response.data;
     }
   });
+
+  // API Keys queries and mutations
+  const { data: apiKeys, isLoading: isLoadingApiKeys } = useQuery({
+    queryKey: ['apiKeys'],
+    queryFn: async () => {
+      const response = await apiKeyApi.getAll();
+      return response.data as ApiKey[];
+    },
+    enabled: activeTab === 'api'
+  });
+
+  const { data: availableForms } = useQuery({
+    queryKey: ['apiKeyForms'],
+    queryFn: async () => {
+      const response = await apiKeyApi.getForms();
+      return response.data as FormOption[];
+    },
+    enabled: activeTab === 'api'
+  });
+
+  const createKeyMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string; formId?: string }) => {
+      const response = await apiKeyApi.create(data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setCreatedKey(data);
+      setShowCreateKeyModal(false);
+      setNewKeyName('');
+      setNewKeyDescription('');
+      setNewKeyFormId('');
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
+      toast.success('API key created successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to create API key');
+    }
+  });
+
+  const revokeKeyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiKeyApi.revoke(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
+      toast.success('API key revoked successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to revoke API key');
+    }
+  });
+
+  const deleteKeyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiKeyApi.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
+      toast.success('API key deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to delete API key');
+    }
+  });
+
+  const handleCreateKey = () => {
+    if (!newKeyName.trim()) {
+      toast.error('Please enter a name for the API key');
+      return;
+    }
+    createKeyMutation.mutate({
+      name: newKeyName.trim(),
+      description: newKeyDescription.trim() || undefined,
+      formId: newKeyFormId || undefined
+    });
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+    toast.success('API key copied to clipboard');
+  };
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -257,6 +380,11 @@ const AdminSettings: React.FC = () => {
     { id: 'export' as TabType, label: 'Export', icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    )},
+    { id: 'api' as TabType, label: 'API', icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
       </svg>
     )}
   ];
@@ -958,6 +1086,399 @@ const AdminSettings: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* API Tab */}
+          {activeTab === 'api' && (
+            <div className="space-y-8">
+              {/* API Key Management */}
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      API Keys
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Manage API keys for external integrations and remote ticket submission
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateKeyModal(true)}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create API Key
+                  </button>
+                </div>
+
+                {/* Created Key Alert */}
+                {createdKey && createdKey.fullKey && (
+                  <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-green-800 dark:text-green-300">
+                          API Key Created Successfully
+                        </h3>
+                        <p className="mt-1 text-sm text-green-700 dark:text-green-400">
+                          Copy your API key now. You won't be able to see it again.
+                        </p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <code className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-green-300 dark:border-green-700 rounded text-sm font-mono text-gray-900 dark:text-white">
+                            {createdKey.fullKey}
+                          </code>
+                          <button
+                            onClick={() => copyToClipboard(createdKey.fullKey!)}
+                            className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium"
+                          >
+                            {copiedKey ? 'Copied!' : 'Copy'}
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setCreatedKey(null)}
+                          className="mt-2 text-sm text-green-600 dark:text-green-400 hover:underline"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* API Keys List */}
+                {isLoadingApiKeys ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : apiKeys && apiKeys.length > 0 ? (
+                  <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Key</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Form Restriction</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usage</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        {apiKeys.map((key) => (
+                          <tr key={key.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">{key.name}</div>
+                                {key.description && (
+                                  <div className="text-sm text-gray-500 dark:text-gray-400">{key.description}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <code className="text-sm font-mono text-gray-600 dark:text-gray-400">{key.keyDisplay}</code>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {key.form ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                                  {key.form.name}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-gray-500 dark:text-gray-400">All forms</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {key.usageCount} requests
+                              {key.lastUsedAt && (
+                                <div className="text-xs">Last used: {new Date(key.lastUsedAt).toLocaleDateString()}</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {key.isActive ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                                  Revoked
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              {key.isActive && (
+                                <button
+                                  onClick={() => revokeKeyMutation.mutate(key.id)}
+                                  className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300 mr-4"
+                                >
+                                  Revoke
+                                </button>
+                              )}
+                              <button
+                                onClick={() => deleteKeyMutation.mutate(key.id)}
+                                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No API keys</h3>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create an API key to enable external integrations.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* API Documentation */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      API Documentation
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Use these endpoints to submit tickets from external applications
+                    </p>
+                  </div>
+                  <a
+                    href="/api-docs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Public API Docs
+                  </a>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Base URL */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Base URL</h3>
+                    <code className="text-sm font-mono text-primary">{window.location.origin}/api/v1</code>
+                  </div>
+
+                  {/* Authentication */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Authentication</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      Include your API key in the Authorization header:
+                    </p>
+                    <code className="block text-sm font-mono bg-gray-900 text-green-400 p-3 rounded">
+                      Authorization: Bearer klv_your_api_key_here
+                    </code>
+                  </div>
+
+                  {/* Endpoints */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">Available Endpoints</h3>
+
+                    {/* GET /forms */}
+                    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">GET</span>
+                        <code className="text-sm font-mono text-gray-900 dark:text-white">/forms</code>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        List all available forms. If your API key is restricted to a specific form, only that form will be returned.
+                      </p>
+                    </div>
+
+                    {/* GET /forms/:formId/schema */}
+                    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">GET</span>
+                        <code className="text-sm font-mono text-gray-900 dark:text-white">/forms/:formId/schema</code>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Get the form schema including all fields, their types, and validation rules.
+                      </p>
+                    </div>
+
+                    {/* GET /fields */}
+                    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">GET</span>
+                        <code className="text-sm font-mono text-gray-900 dark:text-white">/fields</code>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        List all fields from the field library with their types, options, and default values.
+                      </p>
+                    </div>
+
+                    {/* GET /fields/:fieldId */}
+                    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">GET</span>
+                        <code className="text-sm font-mono text-gray-900 dark:text-white">/fields/:fieldId</code>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Get a specific field by ID with its type, options, placeholder, and default value.
+                      </p>
+                    </div>
+
+                    {/* POST /tickets */}
+                    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">POST</span>
+                        <code className="text-sm font-mono text-gray-900 dark:text-white">/tickets</code>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        Create a new ticket. Requires email, subject, and description. Form and form responses are optional.
+                      </p>
+                      <details className="text-sm">
+                        <summary className="cursor-pointer text-primary hover:underline">View request body example</summary>
+                        <pre className="mt-2 p-3 bg-gray-900 text-green-400 rounded overflow-x-auto text-xs">
+{`{
+  "email": "user@example.com",        // Required
+  "subject": "Issue with swap",       // Required
+  "description": "Detailed desc...",  // Required
+  "formId": "uuid-of-form",           // Optional
+  "formResponses": [                  // Optional
+    { "fieldId": "uuid", "value": "Value" }
+  ],
+  "priority": "NORMAL",               // Optional: LOW, NORMAL, HIGH, URGENT
+  "country": "US",                    // Optional
+  "userAgent": "MyApp/1.0"            // Optional
+}`}
+                        </pre>
+                      </details>
+                    </div>
+
+                    {/* GET /tickets/:ticketNumber */}
+                    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">GET</span>
+                        <code className="text-sm font-mono text-gray-900 dark:text-white">/tickets/:ticketNumber</code>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Get ticket status by ticket number. Returns current status, priority, and timestamps.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Response Codes */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Response Codes</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">200</span>
+                        <span className="text-gray-600 dark:text-gray-400">Success</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">201</span>
+                        <span className="text-gray-600 dark:text-gray-400">Created</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded">400</span>
+                        <span className="text-gray-600 dark:text-gray-400">Bad Request</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">401</span>
+                        <span className="text-gray-600 dark:text-gray-400">Unauthorized</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">403</span>
+                        <span className="text-gray-600 dark:text-gray-400">Forbidden</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">404</span>
+                        <span className="text-gray-600 dark:text-gray-400">Not Found</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Create API Key Modal */}
+              {showCreateKeyModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                  <div className="flex min-h-full items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setShowCreateKeyModal(false)} />
+                    <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Create API Key
+                      </h3>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={newKeyName}
+                            onChange={(e) => setNewKeyName(e.target.value)}
+                            placeholder="e.g., K5 Wallet Integration"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Description
+                          </label>
+                          <textarea
+                            value={newKeyDescription}
+                            onChange={(e) => setNewKeyDescription(e.target.value)}
+                            placeholder="What is this API key used for?"
+                            rows={2}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Restrict to Form
+                          </label>
+                          <select
+                            value={newKeyFormId}
+                            onChange={(e) => setNewKeyFormId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                          >
+                            <option value="">All forms (no restriction)</option>
+                            {availableForms?.map((form) => (
+                              <option key={form.id} value={form.id}>{form.name}</option>
+                            ))}
+                          </select>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Optionally restrict this API key to only submit tickets for a specific form.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex justify-end gap-3">
+                        <button
+                          onClick={() => setShowCreateKeyModal(false)}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleCreateKey}
+                          disabled={createKeyMutation.isPending}
+                          className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 rounded-md disabled:opacity-50"
+                        >
+                          {createKeyMutation.isPending ? 'Creating...' : 'Create Key'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
