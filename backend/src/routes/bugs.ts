@@ -97,7 +97,8 @@ router.post(
             userId: user.id,
             type: 'BUG_REPORTED',
             title: 'New Bug Reported',
-            message: title // Only the bug title, not the description
+            message: title, // Only the bug title, not the description
+            bugId: bug.id
           }))
         });
       }
