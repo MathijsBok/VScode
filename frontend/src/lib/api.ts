@@ -229,7 +229,10 @@ export const userApi = {
     api.patch(`/users/${id}`, data),
 
   updateRole: (id: string, role: 'USER' | 'AGENT' | 'ADMIN') =>
-    api.patch(`/users/${id}/role`, { role })
+    api.patch(`/users/${id}/role`, { role }),
+
+  block: (id: string, isBlocked: boolean, reason?: string) =>
+    api.patch(`/users/${id}/block`, { isBlocked, reason })
 };
 
 // Settings API
@@ -248,6 +251,16 @@ export const zendeskApi = {
     formData.append('file', file);
 
     return api.post('/zendesk/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+  importUsers: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return api.post('/zendesk/import-users', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

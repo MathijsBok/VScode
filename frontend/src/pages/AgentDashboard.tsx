@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useClerk, useUser } from '@clerk/clerk-react';
-import { ticketApi, sessionApi } from '../lib/api';
+import { ticketApi, sessionApi, userApi } from '../lib/api';
 import Layout from '../components/Layout';
 import { format } from 'date-fns';
 import { useNotification } from '../contexts/NotificationContext';
@@ -293,10 +293,35 @@ const AgentDashboard: React.FC = () => {
     }
   };
 
-  const handleMarkAsSpam = () => {
+  const blockUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return await userApi.block(userId, true, 'Marked as spam by agent');
+    }
+  });
+
+  const handleMarkAsSpam = async () => {
     if (selectedTickets.length === 0) return;
-    if (window.confirm(`Mark ${selectedTickets.length} ticket(s) as spam and close them?`)) {
-      bulkUpdateMutation.mutate({ ticketIds: selectedTickets, status: 'SOLVED' });
+
+    // Get unique requester IDs from selected tickets
+    const selectedTicketData = sortedTickets.filter((t: any) => selectedTickets.includes(t.id));
+    const requesterIds = [...new Set(selectedTicketData.map((t: any) => t.requesterId))];
+
+    const confirmMessage = `Mark ${selectedTickets.length} ticket(s) as spam and block ${requesterIds.length} user(s)?\n\nThis will:\n- Close the selected tickets\n- Block the requester(s) from accessing the system`;
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        // Block all unique requesters
+        await Promise.all(requesterIds.map(id => blockUserMutation.mutateAsync(id)));
+        toast.success(`${requesterIds.length} user(s) blocked`);
+
+        // Close the tickets
+        bulkUpdateMutation.mutate({ ticketIds: selectedTickets, status: 'SOLVED' });
+
+        // Invalidate users query in case admin page is also open
+        queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+      } catch (error) {
+        toast.error('Failed to block some users');
+      }
     }
   };
 
@@ -727,9 +752,18 @@ const AgentDashboard: React.FC = () => {
                     </td>
                     <td
                       onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 cursor-pointer"
+                      className="px-6 py-2 whitespace-nowrap text-sm cursor-pointer"
                     >
-                      {ticket.requester.name || ticket.requester.email}
+                      <div className="flex items-center gap-2">
+                        <span className={ticket.requester.isBlocked ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}>
+                          {ticket.requester.name || ticket.requester.email}
+                        </span>
+                        {ticket.requester.isBlocked && (
+                          <span className="px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded" title={ticket.requester.blockedReason || 'Blocked'}>
+                            BLOCKED
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td
                       onClick={() => navigate(`/tickets/${ticket.id}`)}
