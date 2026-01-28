@@ -103,11 +103,11 @@ const UserDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      NEW: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      OPEN: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      ON_HOLD: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      SOLVED: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      NEW: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      OPEN: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      PENDING: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      ON_HOLD: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      SOLVED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       CLOSED: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     };
     return colors[status] || colors.NEW;
@@ -202,12 +202,21 @@ const UserDashboard: React.FC = () => {
                   </span>
                 </div>
                 <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '120px' }} />
+                      <col style={{ width: '350px' }} />
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '130px' }} />
+                      <col style={{ width: '130px' }} />
+                      <col style={{ width: '80px' }} />
+                    </colgroup>
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
                         <th
                           onClick={() => handleSort('ticketNumber')}
-                          className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Ticket #
@@ -216,7 +225,7 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('status')}
-                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Status
@@ -234,7 +243,7 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('priority')}
-                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Priority
@@ -243,19 +252,19 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('createdAt')}
-                          className="w-52 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Created
                             <SortIcon field="createdAt" />
                           </div>
                         </th>
-                        <th className="w-52 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Last Updated
                         </th>
                         <th
                           onClick={() => handleSort('comments')}
-                          className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Replies
@@ -279,8 +288,10 @@ const UserDashboard: React.FC = () => {
                               {ticket.status.replace('_', ' ')}
                             </span>
                           </td>
-                          <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
-                            {ticket.subject}
+                          <td className="px-6 py-2 text-sm text-gray-900 dark:text-white overflow-hidden">
+                            <div className="truncate" title={ticket.subject}>
+                              {ticket.subject}
+                            </div>
                           </td>
                           <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white capitalize">
                             {ticket.priority.toLowerCase()}
@@ -336,12 +347,21 @@ const UserDashboard: React.FC = () => {
                   </span>
                 </div>
                 <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '120px' }} />
+                      <col style={{ width: '350px' }} />
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '130px' }} />
+                      <col style={{ width: '130px' }} />
+                      <col style={{ width: '80px' }} />
+                    </colgroup>
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
                         <th
                           onClick={() => handleSort('ticketNumber')}
-                          className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Ticket #
@@ -350,7 +370,7 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('status')}
-                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Status
@@ -368,7 +388,7 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('priority')}
-                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Priority
@@ -377,19 +397,19 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('createdAt')}
-                          className="w-52 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Created
                             <SortIcon field="createdAt" />
                           </div>
                         </th>
-                        <th className="w-52 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Solved
                         </th>
                         <th
                           onClick={() => handleSort('comments')}
-                          className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Replies
@@ -413,8 +433,10 @@ const UserDashboard: React.FC = () => {
                               {ticket.status.replace('_', ' ')}
                             </span>
                           </td>
-                          <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
-                            {ticket.subject}
+                          <td className="px-6 py-2 text-sm text-gray-900 dark:text-white overflow-hidden">
+                            <div className="truncate" title={ticket.subject}>
+                              {ticket.subject}
+                            </div>
                           </td>
                           <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white capitalize">
                             {ticket.priority.toLowerCase()}
@@ -470,12 +492,21 @@ const UserDashboard: React.FC = () => {
                   </span>
                 </div>
                 <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '120px' }} />
+                      <col style={{ width: '350px' }} />
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '130px' }} />
+                      <col style={{ width: '130px' }} />
+                      <col style={{ width: '80px' }} />
+                    </colgroup>
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
                         <th
                           onClick={() => handleSort('ticketNumber')}
-                          className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Ticket #
@@ -484,7 +515,7 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('status')}
-                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Status
@@ -502,7 +533,7 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('priority')}
-                          className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Priority
@@ -511,19 +542,19 @@ const UserDashboard: React.FC = () => {
                         </th>
                         <th
                           onClick={() => handleSort('createdAt')}
-                          className="w-52 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Created
                             <SortIcon field="createdAt" />
                           </div>
                         </th>
-                        <th className="w-52 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Closed
                         </th>
                         <th
                           onClick={() => handleSort('comments')}
-                          className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex items-center">
                             Replies
@@ -547,8 +578,10 @@ const UserDashboard: React.FC = () => {
                               {ticket.status.replace('_', ' ')}
                             </span>
                           </td>
-                          <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
-                            {ticket.subject}
+                          <td className="px-6 py-2 text-sm text-gray-900 dark:text-white overflow-hidden">
+                            <div className="truncate" title={ticket.subject}>
+                              {ticket.subject}
+                            </div>
                           </td>
                           <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white capitalize">
                             {ticket.priority.toLowerCase()}
