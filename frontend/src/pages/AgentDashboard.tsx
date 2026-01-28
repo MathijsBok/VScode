@@ -373,11 +373,11 @@ const AgentDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      NEW: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      OPEN: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      ON_HOLD: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      SOLVED: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      NEW: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      OPEN: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      PENDING: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      ON_HOLD: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      SOLVED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       CLOSED: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     };
     return colors[status] || colors.NEW;
@@ -695,154 +695,170 @@ const AgentDashboard: React.FC = () => {
         {/* Tickets table */}
         {filteredTickets && filteredTickets.length > 0 && (
           <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={paginatedTickets.length > 0 && paginatedTickets.every((t: any) => selectedTickets.includes(t.id))}
-                      onChange={handleSelectAll}
-                      className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
-                    />
-                  </th>
-                  <th
-                    onClick={() => handleSort('ticketNumber')}
-                    className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      Ticket #
-                      <SortIcon field="ticketNumber" />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('status')}
-                    className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      Status
-                      <SortIcon field="status" />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('subject')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      Subject
-                      <SortIcon field="subject" />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('requester')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      Requester
-                      <SortIcon field="requester" />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('priority')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      Priority
-                      <SortIcon field="priority" />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('assignee')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      Assignee
-                      <SortIcon field="assignee" />
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSort('updatedAt')}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      Updated
-                      <SortIcon field="updatedAt" />
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {paginatedTickets.map((ticket: any) => (
-                  <tr
-                    key={ticket.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    <td className="px-6 py-2 whitespace-nowrap">
+            <div className="overflow-x-auto">
+              <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '40px' }} />
+                  <col style={{ width: '90px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '300px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '80px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '100px' }} />
+                </colgroup>
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-4 py-3 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedTickets.includes(ticket.id)}
-                        onChange={(e) => handleSelectTicket(ticket.id, e as any)}
-                        onClick={(e) => e.stopPropagation()}
+                        checked={paginatedTickets.length > 0 && paginatedTickets.every((t: any) => selectedTickets.includes(t.id))}
+                        onChange={handleSelectAll}
                         className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
                       />
-                    </td>
-                    <td
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 whitespace-nowrap text-sm font-medium text-primary cursor-pointer"
+                    </th>
+                    <th
+                      onClick={() => handleSort('ticketNumber')}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
-                      #{ticket.ticketNumber}
-                    </td>
-                    <td
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 whitespace-nowrap cursor-pointer"
-                    >
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
-                        {ticket.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 text-sm text-gray-900 dark:text-white cursor-pointer"
-                    >
-                      {ticket.subject}
-                    </td>
-                    <td
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 whitespace-nowrap text-sm cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={ticket.requester.isBlocked ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}>
-                          {ticket.requester.name || ticket.requester.email}
-                        </span>
-                        {ticket.requester.isBlocked && (
-                          <span className="px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded" title={ticket.requester.blockedReason || 'Blocked'}>
-                            BLOCKED
-                          </span>
-                        )}
+                      <div className="flex items-center">
+                        Ticket #
+                        <SortIcon field="ticketNumber" />
                       </div>
-                    </td>
-                    <td
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white capitalize cursor-pointer"
+                    </th>
+                    <th
+                      onClick={() => handleSort('status')}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
-                      {ticket.priority.toLowerCase()}
-                    </td>
-                    <td
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 cursor-pointer"
+                      <div className="flex items-center">
+                        Status
+                        <SortIcon field="status" />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort('subject')}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
-                      {ticket.assignee ? ticket.assignee.email : 'Unassigned'}
-                    </td>
-                    <td
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 cursor-pointer"
+                      <div className="flex items-center">
+                        Subject
+                        <SortIcon field="subject" />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort('requester')}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
-                      {format(new Date(ticket.updatedAt), 'MMM d, HH:mm')}
-                    </td>
+                      <div className="flex items-center">
+                        Requester
+                        <SortIcon field="requester" />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort('priority')}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <div className="flex items-center">
+                        Priority
+                        <SortIcon field="priority" />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort('assignee')}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <div className="flex items-center">
+                        Assignee
+                        <SortIcon field="assignee" />
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort('updatedAt')}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <div className="flex items-center">
+                        Updated
+                        <SortIcon field="updatedAt" />
+                      </div>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {paginatedTickets.map((ticket: any) => (
+                    <tr
+                      key={ticket.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    >
+                      <td className="px-4 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedTickets.includes(ticket.id)}
+                          onChange={(e) => handleSelectTicket(ticket.id, e as any)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
+                        />
+                      </td>
+                      <td
+                        onClick={() => navigate(`/tickets/${ticket.id}`)}
+                        className="px-4 py-2 text-sm font-medium text-primary cursor-pointer"
+                      >
+                        #{ticket.ticketNumber}
+                      </td>
+                      <td
+                        onClick={() => navigate(`/tickets/${ticket.id}`)}
+                        className="px-4 py-2 cursor-pointer"
+                      >
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap ${getStatusColor(ticket.status)}`}>
+                          {ticket.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td
+                        onClick={() => navigate(`/tickets/${ticket.id}`)}
+                        className="px-4 py-2 text-sm text-gray-900 dark:text-white cursor-pointer overflow-hidden"
+                      >
+                        <div className="truncate" title={ticket.subject}>
+                          {ticket.subject}
+                        </div>
+                      </td>
+                      <td
+                        onClick={() => navigate(`/tickets/${ticket.id}`)}
+                        className="px-4 py-2 text-sm cursor-pointer overflow-hidden"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`truncate ${ticket.requester.isBlocked ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {ticket.requester.name || ticket.requester.email}
+                          </span>
+                          {ticket.requester.isBlocked && (
+                            <span className="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded" title={ticket.requester.blockedReason || 'Blocked'}>
+                              BLOCKED
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td
+                        onClick={() => navigate(`/tickets/${ticket.id}`)}
+                        className="px-4 py-2 text-sm text-gray-900 dark:text-white capitalize cursor-pointer"
+                      >
+                        {ticket.priority.toLowerCase()}
+                      </td>
+                      <td
+                        onClick={() => navigate(`/tickets/${ticket.id}`)}
+                        className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 cursor-pointer overflow-hidden"
+                      >
+                        <div className="truncate">
+                          {ticket.assignee ? ticket.assignee.email : 'Unassigned'}
+                        </div>
+                      </td>
+                      <td
+                        onClick={() => navigate(`/tickets/${ticket.id}`)}
+                        className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 cursor-pointer whitespace-nowrap"
+                      >
+                        {format(new Date(ticket.updatedAt), 'MMM d, HH:mm')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {/* Pagination Controls */}
             {totalPages > 0 && (
