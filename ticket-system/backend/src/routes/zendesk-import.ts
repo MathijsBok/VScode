@@ -482,6 +482,23 @@ router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (
       }
     }
 
+    // Reset the ticketNumber sequence to the max value after import
+    // This ensures new tickets get the next number after the highest imported ticket
+    if (importedCount > 0) {
+      try {
+        await prisma.$executeRawUnsafe(`
+          SELECT setval(
+            pg_get_serial_sequence('"Ticket"', 'ticketNumber'),
+            (SELECT COALESCE(MAX("ticketNumber"), 1) FROM "Ticket"),
+            true
+          )
+        `);
+      } catch (seqError) {
+        console.error('Failed to reset ticket sequence:', seqError);
+        // Non-fatal error, continue with response
+      }
+    }
+
     return res.json({
       success: true,
       imported: importedCount,
@@ -788,6 +805,42 @@ router.post('/import-fields', requireAuth, requireAdmin, uploadCsv.single('file'
     console.error('Error importing ticket fields:', error);
     return res.status(500).json({
       error: 'Failed to import ticket fields',
+      details: error.message
+    });
+  }
+});
+
+// Reset ticket number sequence to max value
+// Useful after imports to ensure new tickets get correct numbers
+router.post('/reset-ticket-sequence', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    // Get the current max ticket number
+    const maxResult = await prisma.ticket.aggregate({
+      _max: {
+        ticketNumber: true
+      }
+    });
+
+    const maxTicketNumber = maxResult._max.ticketNumber || 0;
+
+    // Reset the sequence
+    await prisma.$executeRawUnsafe(`
+      SELECT setval(
+        pg_get_serial_sequence('"Ticket"', 'ticketNumber'),
+        ${maxTicketNumber},
+        true
+      )
+    `);
+
+    return res.json({
+      success: true,
+      message: `Ticket number sequence reset to ${maxTicketNumber}`,
+      nextTicketNumber: maxTicketNumber + 1
+    });
+  } catch (error: any) {
+    console.error('Error resetting ticket sequence:', error);
+    return res.status(500).json({
+      error: 'Failed to reset ticket sequence',
       details: error.message
     });
   }

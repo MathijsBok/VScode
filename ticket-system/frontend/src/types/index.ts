@@ -250,6 +250,7 @@ export interface Notification {
   message: string;
   ticketId?: string;
   commentId?: string;
+  bugId?: string;
   isRead: boolean;
   readAt?: string;
   createdAt: string;

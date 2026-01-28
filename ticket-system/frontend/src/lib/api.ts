@@ -272,7 +272,9 @@ export const zendeskApi = {
         'Content-Type': 'multipart/form-data'
       }
     });
-  }
+  },
+  resetTicketSequence: () =>
+    api.post('/zendesk/reset-ticket-sequence')
 };
 
 // Macro API
