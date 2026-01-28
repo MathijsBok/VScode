@@ -149,7 +149,8 @@ router.post('/',
     body('description').isString().notEmpty(),
     body('formResponses').optional().isArray(),
     body('formResponses.*.fieldId').optional().isUUID(),
-    body('formResponses.*.value').optional().isString()
+    body('formResponses.*.value').optional().isString(),
+    body('userAgent').optional().isString().isLength({ max: 500 })
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -158,7 +159,7 @@ router.post('/',
     }
 
     try {
-      const { subject, channel, priority, categoryId, formId, relatedTicketId, description, formResponses } = req.body;
+      const { subject, channel, priority, categoryId, formId, relatedTicketId, description, formResponses, userAgent } = req.body;
       const userId = req.userId!;
 
       // Get IP address from request
@@ -170,6 +171,9 @@ router.post('/',
       const country = (req.headers['cf-ipcountry'] as string) ||
                      (req.headers['x-country'] as string) ||
                      null;
+
+      // Get user agent from request body (sent by frontend) or fallback to request header
+      const clientUserAgent = userAgent || req.headers['user-agent'] || null;
 
       // Create ticket with initial comment and form responses in a transaction
       const ticket = await prisma.$transaction(async (tx) => {
@@ -184,6 +188,7 @@ router.post('/',
             relatedTicketId: relatedTicketId || null,
             country,
             ipAddress,
+            userAgent: clientUserAgent,
             comments: {
               create: {
                 authorId: userId,

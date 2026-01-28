@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
 import { ticketApi, commentApi, userApi, macroApi, attachmentApi } from '../lib/api';
+import { parseUserAgent } from '../lib/deviceDetection';
 import { Macro, Attachment } from '../types';
 import { useView } from '../contexts/ViewContext';
 import Layout from '../components/Layout';
@@ -401,6 +402,14 @@ const TicketDetail: React.FC = () => {
               <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
                 {ticket.status.replace('_', ' ')}
               </span>
+              <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                ticket.priority === 'URGENT' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                ticket.priority === 'HIGH' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                ticket.priority === 'LOW' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              }`}>
+                {ticket.priority}
+              </span>
 
               {/* Agent actions */}
               {isAgent && (
@@ -556,9 +565,6 @@ const TicketDetail: React.FC = () => {
                 <span className="font-medium">Solved:</span> {format(new Date(ticket.solvedAt), 'MMM d, yyyy HH:mm')}
               </div>
             )}
-            <div>
-              <span className="font-medium">Priority:</span> <span className="capitalize">{ticket.priority.toLowerCase()}</span>
-            </div>
             {ticket.category && (
               <div>
                 <span className="font-medium">Category:</span> {ticket.category.name}
@@ -582,6 +588,56 @@ const TicketDetail: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Device/Environment Information - Only visible to agents/admins */}
+          {isAgent && ticket.userAgent && (
+            <div className="mt-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                {(() => {
+                  const deviceInfo = parseUserAgent(ticket.userAgent);
+                  return deviceInfo.deviceType === 'Mobile' ? (
+                    <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  ) : deviceInfo.deviceType === 'Tablet' ? (
+                    <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  );
+                })()}
+                User Environment
+              </h4>
+              {(() => {
+                const deviceInfo = parseUserAgent(ticket.userAgent);
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400 block">Device</span>
+                      <span className="text-gray-900 dark:text-white font-medium">{deviceInfo.deviceType}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400 block">Operating System</span>
+                      <span className="text-gray-900 dark:text-white font-medium">{deviceInfo.os}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400 block">Browser</span>
+                      <span className="text-gray-900 dark:text-white font-medium">{deviceInfo.browser}</span>
+                    </div>
+                    {ticket.country && (
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block">Country</span>
+                        <span className="text-gray-900 dark:text-white font-medium">{ticket.country}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           {/* Related Ticket Info */}
           {ticket.relatedTicket && (
@@ -1066,6 +1122,7 @@ const TicketDetail: React.FC = () => {
                     src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/attachments/${selectedAttachment.id}/view`}
                     alt={selectedAttachment.filename}
                     className="max-w-full max-h-[70vh] object-contain rounded"
+                    crossOrigin="use-credentials"
                     onLoad={() => setAttachmentLoading(false)}
                     onError={() => {
                       setAttachmentLoading(false);
@@ -1077,6 +1134,7 @@ const TicketDetail: React.FC = () => {
                     src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/attachments/${selectedAttachment.id}/view`}
                     controls
                     className="max-w-full max-h-[70vh] rounded"
+                    crossOrigin="use-credentials"
                     onLoadedData={() => setAttachmentLoading(false)}
                     onError={() => {
                       setAttachmentLoading(false);

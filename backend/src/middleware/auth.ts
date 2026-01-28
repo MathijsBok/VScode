@@ -25,13 +25,21 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     if (!user) {
       try {
         const clerkUser = await clerkClient.users.getUser(userId);
+        const email = clerkUser.emailAddresses[0]?.emailAddress || '';
         const roleFromMetadata = (clerkUser.publicMetadata?.role as string) || 'USER';
         const role = roleFromMetadata.toUpperCase() as 'USER' | 'AGENT' | 'ADMIN';
 
-        user = await prisma.user.create({
-          data: {
+        // Use upsert to handle case where email exists but clerkId is different
+        user = await prisma.user.upsert({
+          where: { email },
+          update: {
             clerkId: userId,
-            email: clerkUser.emailAddresses[0]?.emailAddress || '',
+            firstName: clerkUser.firstName || null,
+            lastName: clerkUser.lastName || null
+          },
+          create: {
+            clerkId: userId,
+            email,
             firstName: clerkUser.firstName || null,
             lastName: clerkUser.lastName || null,
             role
@@ -39,7 +47,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
           select: { id: true, role: true }
         });
 
-        console.log(`Auto-created user: ${user.id} with role ${user.role}`);
+        console.log(`Auto-created/updated user: ${user.id} with role ${user.role}`);
       } catch (createError) {
         console.error('Error auto-creating user:', createError);
         return res.status(401).json({ error: 'User not found and could not be created' });
