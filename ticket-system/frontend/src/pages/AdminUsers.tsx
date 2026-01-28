@@ -6,7 +6,7 @@ import Layout from '../components/Layout';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
-type SortField = 'email' | 'name' | 'role' | 'createdAt' | 'tickets';
+type SortField = 'email' | 'name' | 'role' | 'createdAt' | 'lastSeenAt' | 'timezone' | 'tickets';
 type SortDirection = 'asc' | 'desc';
 
 // SortIcon component moved outside to prevent re-creation
@@ -70,7 +70,9 @@ interface UserTableProps {
   handleEditUser: (user: User) => void;
   handleSaveUser: (userId: string) => void;
   handleCancelEdit: () => void;
+  handleBlockUser: (user: User) => void;
   isPending: boolean;
+  isBlocking: boolean;
 }
 
 const UserTable: React.FC<UserTableProps> = ({
@@ -96,7 +98,9 @@ const UserTable: React.FC<UserTableProps> = ({
   handleEditUser,
   handleSaveUser,
   handleCancelEdit,
-  isPending
+  handleBlockUser,
+  isPending,
+  isBlocking
 }) => (
   <div className="space-y-3">
     <div className="flex items-center gap-3">
@@ -107,11 +111,21 @@ const UserTable: React.FC<UserTableProps> = ({
     </div>
     <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <table className="min-w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
+        <colgroup>
+          <col className="w-[22%]" />
+          <col className="w-[14%]" />
+          <col className="w-[8%]" />
+          <col className="w-[8%]" />
+          <col className="w-[10%]" />
+          <col className="w-[12%]" />
+          <col className="w-[12%]" />
+          <col className="w-[14%]" />
+        </colgroup>
         <thead className="bg-gray-50 dark:bg-gray-900">
           <tr>
             <th
               onClick={() => handleSort('email')}
-              className="w-[37.5%] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="flex items-center">
                 Email
@@ -120,7 +134,7 @@ const UserTable: React.FC<UserTableProps> = ({
             </th>
             <th
               onClick={() => handleSort('name')}
-              className="w-[12.5%] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="flex items-center">
                 Name
@@ -129,7 +143,7 @@ const UserTable: React.FC<UserTableProps> = ({
             </th>
             <th
               onClick={() => handleSort('role')}
-              className="w-[12.5%] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="flex items-center">
                 Role
@@ -138,7 +152,7 @@ const UserTable: React.FC<UserTableProps> = ({
             </th>
             <th
               onClick={() => handleSort('tickets')}
-              className="w-[12.5%] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="flex items-center">
                 Tickets
@@ -146,15 +160,33 @@ const UserTable: React.FC<UserTableProps> = ({
               </div>
             </th>
             <th
+              onClick={() => handleSort('timezone')}
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <div className="flex items-center">
+                Timezone
+                <SortIcon field="timezone" sortField={sortField} sortDirection={sortDirection} />
+              </div>
+            </th>
+            <th
               onClick={() => handleSort('createdAt')}
-              className="w-[12.5%] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="flex items-center">
                 Joined
                 <SortIcon field="createdAt" sortField={sortField} sortDirection={sortDirection} />
               </div>
             </th>
-            <th className="w-[12.5%] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th
+              onClick={() => handleSort('lastSeenAt')}
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <div className="flex items-center">
+                Last Seen
+                <SortIcon field="lastSeenAt" sortField={sortField} sortDirection={sortDirection} />
+              </div>
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Actions
             </th>
           </tr>
@@ -163,9 +195,13 @@ const UserTable: React.FC<UserTableProps> = ({
           {displayUsers.map((user) => (
             <tr
               key={user.id}
-              className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              className={`transition-colors ${
+                user.isBlocked
+                  ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              }`}
             >
-              <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
+              <td className="px-4 py-2 text-sm text-gray-900 dark:text-white truncate" title={user.email}>
                 {editingUserId === user.id ? (
                   <input
                     type="email"
@@ -174,10 +210,17 @@ const UserTable: React.FC<UserTableProps> = ({
                     className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 ) : (
-                  user.email
+                  <div className="flex items-center gap-2">
+                    <span className="truncate">{user.email}</span>
+                    {user.isBlocked && (
+                      <span className="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded" title={user.blockedReason || 'Blocked'}>
+                        BLOCKED
+                      </span>
+                    )}
+                  </div>
                 )}
               </td>
-              <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
+              <td className="px-4 py-2 text-sm text-gray-900 dark:text-white truncate" title={getUserName(user)}>
                 {editingUserId === user.id ? (
                   <div className="flex gap-1">
                     <input
@@ -199,7 +242,7 @@ const UserTable: React.FC<UserTableProps> = ({
                   getUserName(user)
                 )}
               </td>
-              <td className="px-6 py-2 whitespace-nowrap">
+              <td className="px-4 py-2 whitespace-nowrap">
                 {editingUserId === user.id ? (
                   <select
                     value={selectedRole}
@@ -216,13 +259,19 @@ const UserTable: React.FC<UserTableProps> = ({
                   </span>
                 )}
               </td>
-              <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {user._count?.ticketsCreated || 0}
               </td>
-              <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {user.timezone || '-'}
+              </td>
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {format(new Date(user.createdAt), 'MMM d, yyyy')}
               </td>
-              <td className="px-6 py-2 whitespace-nowrap text-sm">
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {user.lastSeenAt ? format(new Date(user.lastSeenAt), 'MMM d, yyyy') : '-'}
+              </td>
+              <td className="px-4 py-2 whitespace-nowrap text-sm">
                 {editingUserId === user.id ? (
                   <div className="flex items-center gap-2">
                     <button
@@ -244,14 +293,38 @@ const UserTable: React.FC<UserTableProps> = ({
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => handleEditUser(user)}
-                    className="text-primary hover:text-primary/80"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEditUser(user)}
+                      className="text-primary hover:text-primary/80"
+                      title="Edit user"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    {user.role !== 'ADMIN' && (
+                      <button
+                        onClick={() => handleBlockUser(user)}
+                        disabled={isBlocking}
+                        className={`${user.isBlocked
+                          ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300'
+                          : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
+                        } disabled:opacity-50`}
+                        title={user.isBlocked ? 'Unblock user' : 'Block user (mark as spam)'}
+                      >
+                        {user.isBlocked ? (
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 )}
               </td>
             </tr>
@@ -321,6 +394,19 @@ const AdminUsers: React.FC = () => {
     }
   });
 
+  const blockUserMutation = useMutation({
+    mutationFn: ({ id, isBlocked, reason }: { id: string; isBlocked: boolean; reason?: string }) =>
+      userApi.block(id, isBlocked, reason),
+    onSuccess: (_data, variables) => {
+      toast.success(variables.isBlocked ? 'User blocked successfully' : 'User unblocked successfully');
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || 'Failed to update user status';
+      toast.error(message);
+    }
+  });
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -354,6 +440,14 @@ const AdminUsers: React.FC = () => {
         case 'createdAt':
           aValue = new Date(a.createdAt).getTime();
           bValue = new Date(b.createdAt).getTime();
+          break;
+        case 'lastSeenAt':
+          aValue = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
+          bValue = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
+          break;
+        case 'timezone':
+          aValue = (a.timezone || '').toLowerCase();
+          bValue = (b.timezone || '').toLowerCase();
           break;
         case 'tickets':
           aValue = a._count?.ticketsCreated || 0;
@@ -417,6 +511,14 @@ const AdminUsers: React.FC = () => {
   const handleCancelEdit = useCallback(() => {
     setEditingUserId(null);
   }, []);
+
+  const handleBlockUser = useCallback((user: User) => {
+    blockUserMutation.mutate({
+      id: user.id,
+      isBlocked: !user.isBlocked,
+      reason: user.isBlocked ? undefined : 'Marked as spam by admin'
+    });
+  }, [blockUserMutation]);
 
   return (
     <Layout>
@@ -486,7 +588,9 @@ const AdminUsers: React.FC = () => {
                 handleEditUser={handleEditUser}
                 handleSaveUser={handleSaveUser}
                 handleCancelEdit={handleCancelEdit}
+                handleBlockUser={handleBlockUser}
                 isPending={updateUserMutation.isPending}
+                isBlocking={blockUserMutation.isPending}
               />
             )}
 
@@ -515,7 +619,9 @@ const AdminUsers: React.FC = () => {
                 handleEditUser={handleEditUser}
                 handleSaveUser={handleSaveUser}
                 handleCancelEdit={handleCancelEdit}
+                handleBlockUser={handleBlockUser}
                 isPending={updateUserMutation.isPending}
+                isBlocking={blockUserMutation.isPending}
               />
             )}
 
@@ -544,7 +650,9 @@ const AdminUsers: React.FC = () => {
                 handleEditUser={handleEditUser}
                 handleSaveUser={handleSaveUser}
                 handleCancelEdit={handleCancelEdit}
+                handleBlockUser={handleBlockUser}
                 isPending={updateUserMutation.isPending}
+                isBlocking={blockUserMutation.isPending}
               />
             )}
           </>

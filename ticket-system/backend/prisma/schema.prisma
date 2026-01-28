@@ -46,15 +46,20 @@ enum CommentChannel {
 }
 
 model User {
-  id             String   @id @default(uuid()) @db.Uuid
-  clerkId        String   @unique
-  email          String   @unique
+  id             String    @id @default(uuid()) @db.Uuid
+  clerkId        String    @unique
+  email          String    @unique
   firstName      String?
   lastName       String?
-  role           UserRole @default(USER)
-  organizationId String?  @db.Uuid
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  role           UserRole  @default(USER)
+  organizationId String?   @db.Uuid
+  timezone       String?
+  lastSeenAt     DateTime?
+  isBlocked      Boolean   @default(false)
+  blockedAt      DateTime?
+  blockedReason  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   organization    Organization?     @relation(fields: [organizationId], references: [id])
   ticketsCreated  Ticket[]          @relation("TicketRequester")

@@ -6,9 +6,12 @@ import Layout from '../components/Layout';
 
 const AdminSettings: React.FC = () => {
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<any>(null);
+  const ticketFileInputRef = useRef<HTMLInputElement>(null);
+  const userFileInputRef = useRef<HTMLInputElement>(null);
+  const [isImportingTickets, setIsImportingTickets] = useState(false);
+  const [isImportingUsers, setIsImportingUsers] = useState(false);
+  const [ticketImportResult, setTicketImportResult] = useState<any>(null);
+  const [userImportResult, setUserImportResult] = useState<any>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -44,7 +47,7 @@ const AdminSettings: React.FC = () => {
     updateMutation.mutate({ [field]: value });
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTicketFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -53,14 +56,14 @@ const AdminSettings: React.FC = () => {
       return;
     }
 
-    setIsImporting(true);
-    setImportResult(null);
+    setIsImportingTickets(true);
+    setTicketImportResult(null);
 
     try {
       const response = await zendeskApi.import(file);
       const result = response.data;
 
-      setImportResult(result);
+      setTicketImportResult(result);
 
       if (result.success) {
         toast.success(`Successfully imported ${result.imported} tickets`);
@@ -71,14 +74,53 @@ const AdminSettings: React.FC = () => {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to import tickets');
-      setImportResult({
+      setTicketImportResult({
         success: false,
         error: error.response?.data?.details || error.message
       });
     } finally {
-      setIsImporting(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      setIsImportingTickets(false);
+      if (ticketFileInputRef.current) {
+        ticketFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleUserFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.json')) {
+      toast.error('Please select a JSON file');
+      return;
+    }
+
+    setIsImportingUsers(true);
+    setUserImportResult(null);
+
+    try {
+      const response = await zendeskApi.importUsers(file);
+      const result = response.data;
+
+      setUserImportResult(result);
+
+      if (result.success) {
+        toast.success(`Successfully imported ${result.imported} users`);
+        if (result.updated > 0) {
+          toast.success(`Updated ${result.updated} existing users`);
+        }
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to import users');
+      setUserImportResult({
+        success: false,
+        error: error.response?.data?.details || error.message
+      });
+    } finally {
+      setIsImportingUsers(false);
+      if (userFileInputRef.current) {
+        userFileInputRef.current.value = '';
       }
     }
   };
@@ -284,103 +326,166 @@ const AdminSettings: React.FC = () => {
             Import from Zendesk
           </h2>
 
-          <div className="space-y-4">
-            <div>
+          <div className="space-y-6">
+            {/* User Import Section */}
+            <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+              <h3 className="text-md font-medium text-gray-900 dark:text-white mb-2">
+                Import Users
+              </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Import tickets and comments from a Zendesk JSON export file. The file should contain tickets, users, and comments data.
+                Import users from a Zendesk user export JSON file. Imports email, name, role, timezone, and last login.
               </p>
 
               <input
-                ref={fileInputRef}
+                ref={userFileInputRef}
                 type="file"
                 accept=".json"
-                onChange={handleFileSelect}
-                disabled={isImporting}
+                onChange={handleUserFileSelect}
+                disabled={isImportingUsers}
                 className="hidden"
               />
 
               <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isImporting}
+                onClick={() => userFileInputRef.current?.click()}
+                disabled={isImportingUsers}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isImporting ? (
+                {isImportingUsers ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Importing...
+                    Importing Users...
                   </>
                 ) : (
                   <>
                     <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
-                    Select Zendesk JSON File
+                    Import Users JSON
                   </>
                 )}
               </button>
+
+              {userImportResult && (
+                <div className={`mt-4 p-4 rounded-md ${
+                  userImportResult.success
+                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                }`}>
+                  <h3 className={`text-sm font-medium ${
+                    userImportResult.success
+                      ? 'text-green-800 dark:text-green-300'
+                      : 'text-red-800 dark:text-red-300'
+                  }`}>
+                    {userImportResult.success ? 'User Import Successful' : 'User Import Failed'}
+                  </h3>
+                  {userImportResult.success && (
+                    <div className="mt-2 text-sm text-green-700 dark:text-green-400">
+                      <p>Imported: {userImportResult.imported} users</p>
+                      {userImportResult.updated > 0 && (
+                        <p>Updated: {userImportResult.updated} users</p>
+                      )}
+                      {userImportResult.skipped > 0 && (
+                        <p>Skipped: {userImportResult.skipped} users</p>
+                      )}
+                    </div>
+                  )}
+                  {!userImportResult.success && (
+                    <p className="mt-2 text-sm text-red-700 dark:text-red-400">
+                      {userImportResult.error}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
-            {importResult && (
-              <div className={`mt-4 p-4 rounded-md ${
-                importResult.success
-                  ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                  : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-              }`}>
-                <h3 className={`text-sm font-medium ${
-                  importResult.success
-                    ? 'text-green-800 dark:text-green-300'
-                    : 'text-red-800 dark:text-red-300'
-                }`}>
-                  {importResult.success ? 'Import Successful' : 'Import Failed'}
-                </h3>
-                {importResult.success && (
-                  <div className="mt-2 text-sm text-green-700 dark:text-green-400">
-                    <p>Imported: {importResult.imported} tickets</p>
-                    {importResult.skipped > 0 && (
-                      <p>Skipped: {importResult.skipped} tickets</p>
-                    )}
-                    {importResult.errors && importResult.errors.length > 0 && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer">View errors</summary>
-                        <ul className="list-disc list-inside mt-1 space-y-1">
-                          {importResult.errors.map((error: string, index: number) => (
-                            <li key={index} className="text-xs">{error}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
-                  </div>
-                )}
-                {!importResult.success && (
-                  <p className="mt-2 text-sm text-red-700 dark:text-red-400">
-                    {importResult.error}
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Ticket Import Section */}
+            <div>
+              <h3 className="text-md font-medium text-gray-900 dark:text-white mb-2">
+                Import Tickets
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Import tickets from a Zendesk ticket export JSON file. Users will be matched by email or created if they don't exist.
+              </p>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
-              <div className="flex">
-                <svg className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                    Expected JSON Format
+              <input
+                ref={ticketFileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleTicketFileSelect}
+                disabled={isImportingTickets}
+                className="hidden"
+              />
+
+              <button
+                onClick={() => ticketFileInputRef.current?.click()}
+                disabled={isImportingTickets}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isImportingTickets ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Importing Tickets...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Import Tickets JSON
+                  </>
+                )}
+              </button>
+
+              {ticketImportResult && (
+                <div className={`mt-4 p-4 rounded-md ${
+                  ticketImportResult.success
+                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                }`}>
+                  <h3 className={`text-sm font-medium ${
+                    ticketImportResult.success
+                      ? 'text-green-800 dark:text-green-300'
+                      : 'text-red-800 dark:text-red-300'
+                  }`}>
+                    {ticketImportResult.success ? 'Ticket Import Successful' : 'Ticket Import Failed'}
                   </h3>
-                  <div className="mt-2 text-sm text-blue-700 dark:text-blue-400">
-                    <p>The JSON file should contain:</p>
-                    <ul className="list-disc list-inside mt-1 space-y-1">
-                      <li>tickets: Array of ticket objects</li>
-                      <li>users: Array of user objects (optional)</li>
-                      <li>comments: Array of comment objects (optional)</li>
-                    </ul>
-                  </div>
+                  {ticketImportResult.success && (
+                    <div className="mt-2 text-sm text-green-700 dark:text-green-400">
+                      <p>Imported: {ticketImportResult.imported} tickets</p>
+                      {ticketImportResult.usersCreated > 0 && (
+                        <p>Users created: {ticketImportResult.usersCreated}</p>
+                      )}
+                      {ticketImportResult.duplicates > 0 && (
+                        <p>Duplicates skipped: {ticketImportResult.duplicates}</p>
+                      )}
+                      {ticketImportResult.skipped > 0 && (
+                        <p>Errors: {ticketImportResult.skipped} tickets</p>
+                      )}
+                      {ticketImportResult.errors && ticketImportResult.errors.length > 0 && (
+                        <details className="mt-2">
+                          <summary className="cursor-pointer">View errors</summary>
+                          <ul className="list-disc list-inside mt-1 space-y-1">
+                            {ticketImportResult.errors.map((error: string, index: number) => (
+                              <li key={index} className="text-xs">{error}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                  {!ticketImportResult.success && (
+                    <p className="mt-2 text-sm text-red-700 dark:text-red-400">
+                      {ticketImportResult.error}
+                    </p>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

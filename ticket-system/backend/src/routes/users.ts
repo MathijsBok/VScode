@@ -70,6 +70,11 @@ router.get('/', requireAuth, requireAdmin, async (_req: AuthRequest, res: Respon
         firstName: true,
         lastName: true,
         role: true,
+        timezone: true,
+        lastSeenAt: true,
+        isBlocked: true,
+        blockedAt: true,
+        blockedReason: true,
         createdAt: true,
         _count: {
           select: {
@@ -259,6 +264,73 @@ router.patch(
     } catch (error) {
       console.error('Error updating user role:', error);
       return res.status(500).json({ error: 'Failed to update user role' });
+    }
+  }
+);
+
+// Block/Unblock user (admin only)
+router.patch(
+  '/:id/block',
+  requireAuth,
+  requireAdmin,
+  [
+    body('isBlocked').isBoolean().withMessage('isBlocked must be a boolean'),
+    body('reason').optional().isString()
+  ],
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { id } = req.params;
+      const { isBlocked, reason } = req.body;
+
+      // Find the user
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, role: true }
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Prevent blocking admins
+      if (user.role === 'ADMIN') {
+        return res.status(400).json({ error: 'Cannot block admin users' });
+      }
+
+      // Prevent admin from blocking themselves
+      if (user.id === req.userId) {
+        return res.status(400).json({ error: 'You cannot block yourself' });
+      }
+
+      // Update user blocked status
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: {
+          isBlocked,
+          blockedAt: isBlocked ? new Date() : null,
+          blockedReason: isBlocked ? (reason || 'Blocked by admin') : null
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          isBlocked: true,
+          blockedAt: true,
+          blockedReason: true
+        }
+      });
+
+      return res.json(updatedUser);
+    } catch (error) {
+      console.error('Error blocking/unblocking user:', error);
+      return res.status(500).json({ error: 'Failed to update user blocked status' });
     }
   }
 );

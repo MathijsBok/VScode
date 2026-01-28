@@ -16,6 +16,11 @@ export interface User {
   lastName?: string;
   role: UserRole;
   organizationId?: string;
+  timezone?: string;
+  lastSeenAt?: string;
+  isBlocked?: boolean;
+  blockedAt?: string;
+  blockedReason?: string;
   createdAt: string;
   updatedAt?: string;
   _count?: {
