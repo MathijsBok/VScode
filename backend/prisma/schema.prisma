@@ -462,3 +462,18 @@ model ApiKey {
   @@index([isActive])
   @@index([createdById])
 }
+
+// Daily snapshot of ticket backlog by status
+model BacklogSnapshot {
+  id          String   @id @default(uuid()) @db.Uuid
+  date        DateTime @db.Date
+  newCount    Int      @default(0)
+  openCount   Int      @default(0)
+  pendingCount Int     @default(0)
+  holdCount   Int      @default(0)
+  totalCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([date])
+  @@index([date])
+}

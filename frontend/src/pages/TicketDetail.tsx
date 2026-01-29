@@ -617,8 +617,19 @@ const TicketDetail: React.FC = () => {
               </h4>
               {(() => {
                 const deviceInfo = ticket.userAgent ? parseUserAgent(ticket.userAgent) : null;
+                const channelLabels: Record<string, string> = {
+                  'EMAIL': 'Email',
+                  'WEB': 'Web',
+                  'API': 'API',
+                  'SLACK': 'Slack',
+                  'INTERNAL': 'Internal'
+                };
                 return (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400 block">Contacted By</span>
+                      <span className="text-gray-900 dark:text-white font-medium">{channelLabels[ticket.channel] || ticket.channel}</span>
+                    </div>
                     <div>
                       <span className="text-gray-500 dark:text-gray-400 block">Device</span>
                       <span className="text-gray-900 dark:text-white font-medium">{deviceInfo?.deviceType || 'Unknown'}</span>
@@ -874,45 +885,49 @@ const TicketDetail: React.FC = () => {
                     // Determine message style based on author and type
                     const isFromRequester = comment.author?.id === ticket.requester?.id;
                     let messageStyle = '';
+                    let borderAccent = '';
                     if (comment.isInternal) {
-                      // Internal notes: yellow
-                      messageStyle = 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800';
+                      // Internal notes: yellow with left accent
+                      messageStyle = 'bg-yellow-50 dark:bg-yellow-950/40 border-l-4 border-l-yellow-400 dark:border-l-yellow-500';
+                      borderAccent = 'border border-yellow-200 dark:border-yellow-900/50';
                     } else if (isFromRequester) {
-                      // User/requester messages: light blue
-                      messageStyle = 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800';
+                      // User/requester messages: blue with left accent
+                      messageStyle = 'bg-blue-50 dark:bg-slate-800 border-l-4 border-l-blue-400 dark:border-l-blue-500';
+                      borderAccent = 'border border-blue-200 dark:border-slate-600';
                     } else {
-                      // Agent/admin messages: light gray
-                      messageStyle = 'bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600';
+                      // Agent/admin messages: gray with left accent
+                      messageStyle = 'bg-gray-50 dark:bg-gray-700/70 border-l-4 border-l-gray-400 dark:border-l-gray-500';
+                      borderAccent = 'border border-gray-200 dark:border-gray-600';
                     }
                     return (
                     <div
                       key={comment.id}
-                      className={`p-4 rounded-lg ${messageStyle}`}
+                      className={`p-5 rounded-lg ${messageStyle} ${borderAccent}`}
                     >
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 dark:text-white">
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
                           {comment.author.firstName || comment.author.lastName
                             ? `${comment.author.firstName || ''} ${comment.author.lastName || ''}`.trim()
                             : comment.author.email}
                         </span>
                         {comment.isInternal && (
-                          <span className="px-2 py-0.5 bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-xs rounded-full">
+                          <span className="px-2 py-0.5 bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-100 text-xs font-medium rounded-full">
                             Internal
                           </span>
                         )}
                         {comment.isSystem && (
-                          <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs rounded-full">
+                          <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 text-xs font-medium rounded-full">
                             System
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                         {format(new Date(comment.createdAt), 'MMM d, yyyy HH:mm')}
                       </span>
                     </div>
                     <div
-                      className="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none break-words overflow-hidden"
+                      className="comment-content text-sm max-w-none break-words overflow-hidden [&_p]:mb-2 [&_p:last-child]:mb-0"
                       dangerouslySetInnerHTML={{ __html: comment.body || comment.bodyPlain }}
                     />
                   </div>
@@ -1174,6 +1189,23 @@ const TicketDetail: React.FC = () => {
           </div>
         )}
       </div>
+      <style>{`
+        .comment-content,
+        .comment-content * {
+          color: rgb(31 41 55) !important;
+        }
+        .dark .comment-content,
+        .dark .comment-content * {
+          color: rgb(229 231 235) !important;
+        }
+        .comment-content a {
+          color: rgb(37 99 235) !important;
+          text-decoration: underline;
+        }
+        .dark .comment-content a {
+          color: rgb(96 165 250) !important;
+        }
+      `}</style>
     </Layout>
   );
 };

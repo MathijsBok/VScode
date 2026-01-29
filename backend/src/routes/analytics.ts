@@ -829,6 +829,173 @@ router.get('/forms-by-year', requireAuth, requireAdmin, async (req: AuthRequest,
   }
 });
 
+// Get tickets by channel with year filter (admin only)
+router.get('/channel-by-year', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const ticketsByChannel = await prisma.ticket.groupBy({
+      by: ['channel'],
+      _count: true,
+      where: {
+        createdAt: {
+          gte: startDate,
+          lt: endDate
+        }
+      }
+    });
+
+    const channelData = ticketsByChannel.map(item => ({
+      name: item.channel,
+      value: item._count
+    }));
+
+    // Get available years
+    const availableYears = await prisma.$queryRaw<Array<{ year: number }>>`
+      SELECT DISTINCT EXTRACT(YEAR FROM "createdAt")::integer as year
+      FROM "Ticket"
+      ORDER BY year DESC
+    `;
+
+    return res.json({
+      year,
+      data: channelData,
+      availableYears: availableYears.map((y) => y.year)
+    });
+  } catch (error) {
+    console.error('Error fetching channel by year:', error);
+    return res.status(500).json({ error: 'Failed to fetch channel data' });
+  }
+});
+
+// Get tickets by priority with year filter (admin only)
+router.get('/priority-by-year', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const ticketsByPriority = await prisma.ticket.groupBy({
+      by: ['priority'],
+      _count: true,
+      where: {
+        createdAt: {
+          gte: startDate,
+          lt: endDate
+        }
+      }
+    });
+
+    const priorityData = ticketsByPriority.map(item => ({
+      name: item.priority,
+      value: item._count,
+      label: item.priority.charAt(0) + item.priority.slice(1).toLowerCase()
+    }));
+
+    // Get available years
+    const availableYears = await prisma.$queryRaw<Array<{ year: number }>>`
+      SELECT DISTINCT EXTRACT(YEAR FROM "createdAt")::integer as year
+      FROM "Ticket"
+      ORDER BY year DESC
+    `;
+
+    return res.json({
+      year,
+      data: priorityData,
+      availableYears: availableYears.map((y) => y.year)
+    });
+  } catch (error) {
+    console.error('Error fetching priority by year:', error);
+    return res.status(500).json({ error: 'Failed to fetch priority data' });
+  }
+});
+
+// Get tickets by day of week with year filter (admin only)
+router.get('/weekday-by-year', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const weekdayDistribution = await prisma.$queryRaw`
+      SELECT EXTRACT(DOW FROM "createdAt")::integer as day, COUNT(*)::integer as count
+      FROM "Ticket"
+      WHERE "createdAt" >= ${startDate} AND "createdAt" < ${endDate}
+      GROUP BY EXTRACT(DOW FROM "createdAt")
+      ORDER BY day
+    `;
+
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const weekdayData = weekdayNames.map((name, i) => {
+      const found = (weekdayDistribution as any[]).find((d: any) => d.day === i);
+      return {
+        name,
+        value: found ? Number(found.count) : 0
+      };
+    });
+
+    // Get available years
+    const availableYears = await prisma.$queryRaw<Array<{ year: number }>>`
+      SELECT DISTINCT EXTRACT(YEAR FROM "createdAt")::integer as year
+      FROM "Ticket"
+      ORDER BY year DESC
+    `;
+
+    return res.json({
+      year,
+      data: weekdayData,
+      availableYears: availableYears.map((y) => y.year)
+    });
+  } catch (error) {
+    console.error('Error fetching weekday by year:', error);
+    return res.status(500).json({ error: 'Failed to fetch weekday data' });
+  }
+});
+
+// Get tickets by hour of day with year filter (admin only)
+router.get('/hourly-by-year', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const hourlyDistribution = await prisma.$queryRaw`
+      SELECT EXTRACT(HOUR FROM "createdAt")::integer as hour, COUNT(*)::integer as count
+      FROM "Ticket"
+      WHERE "createdAt" >= ${startDate} AND "createdAt" < ${endDate}
+      GROUP BY EXTRACT(HOUR FROM "createdAt")
+      ORDER BY hour
+    `;
+
+    const hourlyData = Array.from({ length: 24 }, (_, i) => {
+      const found = (hourlyDistribution as any[]).find((h: any) => h.hour === i);
+      return {
+        hour: i,
+        count: found ? Number(found.count) : 0,
+        label: `${i}:00`
+      };
+    });
+
+    // Get available years
+    const availableYears = await prisma.$queryRaw<Array<{ year: number }>>`
+      SELECT DISTINCT EXTRACT(YEAR FROM "createdAt")::integer as year
+      FROM "Ticket"
+      ORDER BY year DESC
+    `;
+
+    return res.json({
+      year,
+      data: hourlyData,
+      availableYears: availableYears.map((y) => y.year)
+    });
+  } catch (error) {
+    console.error('Error fetching hourly by year:', error);
+    return res.status(500).json({ error: 'Failed to fetch hourly data' });
+  }
+});
+
 // Get dashboard analytics with detailed charts data (admin only)
 router.get('/dashboard', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
   try {
@@ -1159,6 +1326,261 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req: AuthRequest, re
   } catch (error) {
     console.error('Error fetching dashboard analytics:', error);
     return res.status(500).json({ error: 'Failed to fetch dashboard analytics' });
+  }
+});
+
+// Get historical backlog by status (daily for 30 days, weekly for 12 weeks)
+// Now reads from BacklogSnapshot table for accurate historical data
+router.get('/backlog-history', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    const twelveWeeksAgo = new Date();
+    twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 84); // 12 weeks = 84 days
+    twelveWeeksAgo.setHours(0, 0, 0, 0);
+
+    // Get daily snapshots for last 30 days
+    const dailySnapshots = await prisma.backlogSnapshot.findMany({
+      where: {
+        date: {
+          gte: thirtyDaysAgo
+        }
+      },
+      orderBy: {
+        date: 'asc'
+      }
+    });
+
+    // Get weekly snapshots for last 12 weeks (use end of week snapshots)
+    const weeklySnapshots = await prisma.backlogSnapshot.findMany({
+      where: {
+        date: {
+          gte: twelveWeeksAgo
+        }
+      },
+      orderBy: {
+        date: 'asc'
+      }
+    });
+
+    // Process daily data
+    const dailyData = dailySnapshots.map((snapshot) => ({
+      date: snapshot.date,
+      new: snapshot.newCount,
+      open: snapshot.openCount,
+      pending: snapshot.pendingCount,
+      hold: snapshot.holdCount,
+      total: snapshot.totalCount
+    }));
+
+    // Aggregate weekly data - group by week start (Monday)
+    const weeklyMap = new Map<string, { weekStart: Date; new: number; open: number; pending: number; hold: number; total: number }>();
+
+    for (const snapshot of weeklySnapshots as Array<{ date: Date; newCount: number; openCount: number; pendingCount: number; holdCount: number; totalCount: number }>) {
+      const date = new Date(snapshot.date);
+      // Get start of week (Monday) using UTC methods to avoid timezone issues
+      const day = date.getUTCDay();
+      const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1);
+      const weekStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), diff));
+      const weekKey = weekStart.toISOString().split('T')[0];
+
+      // Use the latest snapshot of each week
+      weeklyMap.set(weekKey, {
+        weekStart: new Date(weekKey + 'T00:00:00.000Z'),
+        new: snapshot.newCount,
+        open: snapshot.openCount,
+        pending: snapshot.pendingCount,
+        hold: snapshot.holdCount,
+        total: snapshot.totalCount
+      });
+    }
+
+    const weeklyData = Array.from(weeklyMap.values())
+      .sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime())
+      .slice(-12); // Last 12 weeks
+
+    return res.json({
+      daily: dailyData,
+      weekly: weeklyData
+    });
+  } catch (error) {
+    console.error('Error fetching backlog history:', error);
+    return res.status(500).json({ error: 'Failed to fetch backlog history' });
+  }
+});
+
+// Backfill historical backlog snapshots (admin only)
+// This creates snapshots for the past X days based on current ticket data
+router.post('/backfill-backlog', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const days = req.body.days || 90; // Default 90 days
+    const results: Array<{ date: string; new: number; open: number; pending: number; hold: number; total: number }> = [];
+
+    console.log(`[Backfill Backlog] Starting backfill for ${days} days`);
+
+    for (let i = 0; i < days; i++) {
+      // Use UTC date to avoid timezone issues
+      const now = new Date();
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
+
+      // Count tickets that were in backlog status on this date
+      // A ticket was in backlog if it was created before/on this date and not solved before this date
+      const [newCount, openCount, pendingCount, holdCount] = await Promise.all([
+        prisma.ticket.count({
+          where: {
+            status: 'NEW',
+            createdAt: { lte: new Date(date.getTime() + 24 * 60 * 60 * 1000) }, // Created by end of this day
+            OR: [
+              { solvedAt: null },
+              { solvedAt: { gt: date } }
+            ]
+          }
+        }),
+        prisma.ticket.count({
+          where: {
+            status: 'OPEN',
+            createdAt: { lte: new Date(date.getTime() + 24 * 60 * 60 * 1000) },
+            OR: [
+              { solvedAt: null },
+              { solvedAt: { gt: date } }
+            ]
+          }
+        }),
+        prisma.ticket.count({
+          where: {
+            status: 'PENDING',
+            createdAt: { lte: new Date(date.getTime() + 24 * 60 * 60 * 1000) },
+            OR: [
+              { solvedAt: null },
+              { solvedAt: { gt: date } }
+            ]
+          }
+        }),
+        prisma.ticket.count({
+          where: {
+            status: 'ON_HOLD',
+            createdAt: { lte: new Date(date.getTime() + 24 * 60 * 60 * 1000) },
+            OR: [
+              { solvedAt: null },
+              { solvedAt: { gt: date } }
+            ]
+          }
+        })
+      ]);
+
+      const totalCount = newCount + openCount + pendingCount + holdCount;
+
+      // Upsert the snapshot
+      await prisma.backlogSnapshot.upsert({
+        where: { date },
+        create: {
+          date,
+          newCount,
+          openCount,
+          pendingCount,
+          holdCount,
+          totalCount
+        },
+        update: {
+          newCount,
+          openCount,
+          pendingCount,
+          holdCount,
+          totalCount
+        }
+      });
+
+      results.push({
+        date: date.toISOString().split('T')[0],
+        new: newCount,
+        open: openCount,
+        pending: pendingCount,
+        hold: holdCount,
+        total: totalCount
+      });
+    }
+
+    console.log(`[Backfill Backlog] Completed backfill for ${days} days`);
+
+    return res.json({
+      message: `Backfilled ${days} days of backlog snapshots`,
+      snapshots: results.slice(0, 10) // Return first 10 as sample
+    });
+  } catch (error) {
+    console.error('Error backfilling backlog history:', error);
+    return res.status(500).json({ error: 'Failed to backfill backlog history' });
+  }
+});
+
+// Import historical backlog data (admin only)
+// Allows importing specific values from external sources like Zendesk
+router.post('/import-backlog', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { snapshots } = req.body;
+
+    if (!Array.isArray(snapshots) || snapshots.length === 0) {
+      return res.status(400).json({ error: 'snapshots array is required' });
+    }
+
+    console.log(`[Import Backlog] Importing ${snapshots.length} snapshots`);
+
+    const results: Array<{ date: string; new: number; open: number; pending: number; hold: number; total: number; status: string }> = [];
+
+    for (const snapshot of snapshots) {
+      const { date, new: newCount, open: openCount, pending: pendingCount, hold: holdCount } = snapshot;
+
+      if (!date) {
+        results.push({ ...snapshot, status: 'skipped - no date' });
+        continue;
+      }
+
+      // Parse date as UTC to avoid timezone issues
+      const [year, month, day] = date.split('-').map(Number);
+      const snapshotDate = new Date(Date.UTC(year, month - 1, day));
+
+      const totalCount = (newCount || 0) + (openCount || 0) + (pendingCount || 0) + (holdCount || 0);
+
+      await prisma.backlogSnapshot.upsert({
+        where: { date: snapshotDate },
+        create: {
+          date: snapshotDate,
+          newCount: newCount || 0,
+          openCount: openCount || 0,
+          pendingCount: pendingCount || 0,
+          holdCount: holdCount || 0,
+          totalCount
+        },
+        update: {
+          newCount: newCount || 0,
+          openCount: openCount || 0,
+          pendingCount: pendingCount || 0,
+          holdCount: holdCount || 0,
+          totalCount
+        }
+      });
+
+      results.push({
+        date: snapshotDate.toISOString().split('T')[0],
+        new: newCount || 0,
+        open: openCount || 0,
+        pending: pendingCount || 0,
+        hold: holdCount || 0,
+        total: totalCount,
+        status: 'imported'
+      });
+    }
+
+    console.log(`[Import Backlog] Successfully imported ${results.filter(r => r.status === 'imported').length} snapshots`);
+
+    return res.json({
+      message: `Imported ${results.filter(r => r.status === 'imported').length} backlog snapshots`,
+      results
+    });
+  } catch (error) {
+    console.error('Error importing backlog history:', error);
+    return res.status(500).json({ error: 'Failed to import backlog history' });
   }
 });
 

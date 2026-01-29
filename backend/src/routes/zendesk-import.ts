@@ -71,6 +71,15 @@ interface ZendeskCustomField {
   value: any;
 }
 
+interface ZendeskVia {
+  channel?: string;
+  source?: {
+    from?: Record<string, unknown>;
+    to?: Record<string, unknown>;
+    rel?: string;
+  };
+}
+
 interface ZendeskTicket {
   id: number;
   subject?: string;
@@ -84,6 +93,7 @@ interface ZendeskTicket {
   submitter?: ZendeskUser;
   comments?: ZendeskComment[];
   custom_fields?: ZendeskCustomField[];
+  via?: ZendeskVia;
   created_at?: string;
   updated_at?: string;
   solved_at?: string;
@@ -112,6 +122,27 @@ const mapPriority = (zendeskPriority: string | null): TicketPriority => {
     'urgent': 'URGENT'
   };
   return priorityMap[zendeskPriority.toLowerCase()] || 'NORMAL';
+};
+
+// Map Zendesk via/channel to our channel
+const mapChannel = (via?: ZendeskVia): TicketChannel => {
+  if (!via?.channel) return 'WEB';
+  const channelMap: Record<string, TicketChannel> = {
+    'email': 'EMAIL',
+    'web': 'WEB',
+    'api': 'API',
+    'chat': 'WEB',
+    'voice': 'WEB',
+    'twitter': 'WEB',
+    'facebook': 'WEB',
+    'mobile': 'WEB',
+    'mobile_sdk': 'WEB',
+    'sample_ticket': 'INTERNAL',
+    'closed_ticket': 'WEB',
+    'ticket_sharing': 'INTERNAL',
+    'any_channel': 'WEB'
+  };
+  return channelMap[via.channel.toLowerCase()] || 'WEB';
 };
 
 // Parse name into first and last name
@@ -392,18 +423,13 @@ router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (
     }
 
     // Process each ticket
-    let duplicateCount = 0;
+    let updatedCount = 0;
     for (const zendeskTicket of tickets) {
       try {
         // Check if ticket with this number already exists
         const existingTicket = await prisma.ticket.findUnique({
           where: { ticketNumber: zendeskTicket.id }
         });
-
-        if (existingTicket) {
-          duplicateCount++;
-          continue; // Skip duplicate tickets
-        }
 
         // Get requester ID - try embedded object first, then requester_id
         let requesterId = adminUser.id;
@@ -429,52 +455,72 @@ router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (
           solvedAt = zendeskTicket.updated_at ? new Date(zendeskTicket.updated_at) : new Date();
         }
 
-        // Create ticket with original Zendesk ticket number
-        const ticket = await prisma.ticket.create({
-          data: {
-            ticketNumber: zendeskTicket.id,
-            subject: zendeskTicket.subject || 'Imported from Zendesk',
-            status: mapStatus(zendeskTicket.status),
-            priority: mapPriority(zendeskTicket.priority || null),
-            channel: TicketChannel.WEB,
-            requesterId,
-            assigneeId,
-            createdAt: zendeskTicket.created_at ? new Date(zendeskTicket.created_at) : undefined,
-            updatedAt: zendeskTicket.updated_at ? new Date(zendeskTicket.updated_at) : undefined,
-            solvedAt
-          }
-        });
-
-        // Import embedded comments (skip attachments)
-        const ticketComments = zendeskTicket.comments || [];
-        for (const comment of ticketComments) {
-          const commentAuthorId = userMap.get(comment.author_id) || adminUser.id;
-
-          await prisma.comment.create({
+        let ticket;
+        if (existingTicket) {
+          // Update existing ticket with new data
+          ticket = await prisma.ticket.update({
+            where: { ticketNumber: zendeskTicket.id },
             data: {
-              ticketId: ticket.id,
-              authorId: commentAuthorId,
-              body: comment.html_body || comment.body || 'No content',
-              bodyPlain: comment.plain_body || comment.body || 'No content',
-              isInternal: comment.public === false,
-              isSystem: false,
-              channel: 'SYSTEM',
-              createdAt: comment.created_at ? new Date(comment.created_at) : undefined
+              subject: zendeskTicket.subject || existingTicket.subject,
+              status: mapStatus(zendeskTicket.status),
+              priority: mapPriority(zendeskTicket.priority || null),
+              channel: mapChannel(zendeskTicket.via),
+              requesterId,
+              assigneeId,
+              updatedAt: zendeskTicket.updated_at ? new Date(zendeskTicket.updated_at) : undefined,
+              solvedAt
             }
           });
+          updatedCount++;
+        } else {
+          // Create ticket with original Zendesk ticket number
+          ticket = await prisma.ticket.create({
+            data: {
+              ticketNumber: zendeskTicket.id,
+              subject: zendeskTicket.subject || 'Imported from Zendesk',
+              status: mapStatus(zendeskTicket.status),
+              priority: mapPriority(zendeskTicket.priority || null),
+              channel: mapChannel(zendeskTicket.via),
+              requesterId,
+              assigneeId,
+              createdAt: zendeskTicket.created_at ? new Date(zendeskTicket.created_at) : undefined,
+              updatedAt: zendeskTicket.updated_at ? new Date(zendeskTicket.updated_at) : undefined,
+              solvedAt
+            }
+          });
+          importedCount++;
         }
 
-        // Import custom field values as FormResponses
-        if (zendeskTicket.custom_fields && zendeskTicket.custom_fields.length > 0) {
-          const responsesCreated = await createFormResponses(
-            ticket.id,
-            zendeskTicket.custom_fields,
-            customFieldMap
-          );
-          createdResponsesCount += responsesCreated;
-        }
+        // Import embedded comments only for new tickets (skip for updates to avoid duplicates)
+        if (!existingTicket) {
+          const ticketComments = zendeskTicket.comments || [];
+          for (const comment of ticketComments) {
+            const commentAuthorId = userMap.get(comment.author_id) || adminUser.id;
 
-        importedCount++;
+            await prisma.comment.create({
+              data: {
+                ticketId: ticket.id,
+                authorId: commentAuthorId,
+                body: comment.html_body || comment.body || 'No content',
+                bodyPlain: comment.plain_body || comment.body || 'No content',
+                isInternal: comment.public === false,
+                isSystem: false,
+                channel: 'SYSTEM',
+                createdAt: comment.created_at ? new Date(comment.created_at) : undefined
+              }
+            });
+          }
+
+          // Import custom field values as FormResponses (only for new tickets)
+          if (zendeskTicket.custom_fields && zendeskTicket.custom_fields.length > 0) {
+            const responsesCreated = await createFormResponses(
+              ticket.id,
+              zendeskTicket.custom_fields,
+              customFieldMap
+            );
+            createdResponsesCount += responsesCreated;
+          }
+        }
       } catch (error: any) {
         console.error(`Error importing ticket ${zendeskTicket.id}:`, error);
         errors.push(`Ticket ${zendeskTicket.id}: ${error.message}`);
@@ -502,7 +548,7 @@ router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (
     return res.json({
       success: true,
       imported: importedCount,
-      duplicates: duplicateCount,
+      updated: updatedCount,
       skipped: skippedCount,
       usersCreated: createdUsersCount,
       customFieldsCreated: createdFieldsCount,

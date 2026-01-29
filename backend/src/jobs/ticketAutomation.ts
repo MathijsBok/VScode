@@ -183,6 +183,68 @@ async function autoSolvePendingTickets() {
 }
 
 /**
+ * Capture daily backlog snapshot for historical tracking
+ */
+async function captureBacklogSnapshot() {
+  try {
+    // Use UTC date to avoid timezone issues
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    // Check if we already have a snapshot for today
+    const existingSnapshot = await prisma.backlogSnapshot.findUnique({
+      where: { date: today }
+    });
+
+    if (existingSnapshot) {
+      console.log('[Backlog Snapshot] Snapshot already exists for today, updating...');
+    }
+
+    // Get current counts by status
+    const statusCounts = await prisma.ticket.groupBy({
+      by: ['status'],
+      _count: true,
+      where: {
+        status: {
+          in: ['NEW', 'OPEN', 'PENDING', 'ON_HOLD']
+        }
+      }
+    });
+
+    const newCount = statusCounts.find(s => s.status === 'NEW')?._count || 0;
+    const openCount = statusCounts.find(s => s.status === 'OPEN')?._count || 0;
+    const pendingCount = statusCounts.find(s => s.status === 'PENDING')?._count || 0;
+    const holdCount = statusCounts.find(s => s.status === 'ON_HOLD')?._count || 0;
+    const totalCount = newCount + openCount + pendingCount + holdCount;
+
+    // Upsert the snapshot
+    await prisma.backlogSnapshot.upsert({
+      where: { date: today },
+      create: {
+        date: today,
+        newCount,
+        openCount,
+        pendingCount,
+        holdCount,
+        totalCount
+      },
+      update: {
+        newCount,
+        openCount,
+        pendingCount,
+        holdCount,
+        totalCount
+      }
+    });
+
+    console.log(`[Backlog Snapshot] Captured for ${today.toISOString().split('T')[0]}: New=${newCount}, Open=${openCount}, Pending=${pendingCount}, Hold=${holdCount}, Total=${totalCount}`);
+
+  } catch (error) {
+    console.error('[Backlog Snapshot] Error capturing snapshot:', error);
+  }
+}
+
+/**
  * Clean up old read notifications (older than 5 days)
  */
 async function cleanupOldNotifications() {
@@ -235,11 +297,19 @@ export function initializeTicketAutomation() {
     await runTicketAutomation();
   });
 
+  // Capture backlog snapshot daily at midnight
+  cron.schedule('0 0 * * *', async () => {
+    console.log('[Backlog Snapshot] Running daily snapshot capture');
+    await captureBacklogSnapshot();
+  });
+
   // Run once on startup after a short delay
   setTimeout(async () => {
     console.log('[Ticket Automation] Running initial automation check');
     await runTicketAutomation();
+    // Also capture a snapshot on startup if none exists for today
+    await captureBacklogSnapshot();
   }, 10000); // Wait 10 seconds after startup
 
-  console.log('[Ticket Automation] Scheduled jobs initialized (runs every hour)');
+  console.log('[Ticket Automation] Scheduled jobs initialized (runs every hour, backlog snapshot daily at midnight)');
 }

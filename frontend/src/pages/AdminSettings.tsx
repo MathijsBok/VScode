@@ -36,6 +36,7 @@ const AdminSettings: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const ticketFileInputRef = useRef<HTMLInputElement>(null);
   const userFileInputRef = useRef<HTMLInputElement>(null);
+  const backlogFileInputRef = useRef<HTMLInputElement>(null);
 
   // Get active tab from URL, default to 'notifications'
   const tabParam = searchParams.get('tab') as TabType | null;
@@ -79,6 +80,19 @@ const AdminSettings: React.FC = () => {
     formBreakdown: Record<string, number>;
     skippedNoMatch: number;
     skippedMultipleForms: number;
+  } | null>(null);
+  // Maintenance state - Backlog
+  const [backfillBacklogLoading, setBackfillBacklogLoading] = useState(false);
+  const [backfillBacklogResult, setBackfillBacklogResult] = useState<{
+    message: string;
+    snapshots: Array<{ date: string; new: number; open: number; pending: number; hold: number; total: number }>;
+  } | null>(null);
+  // Import Backlog state
+  const [importBacklogLoading, setImportBacklogLoading] = useState(false);
+  const [importBacklogJson, setImportBacklogJson] = useState('');
+  const [importBacklogResult, setImportBacklogResult] = useState<{
+    message: string;
+    results: Array<{ date: string; new: number; open: number; pending: number; hold: number; total: number; status: string }>;
   } | null>(null);
 
   const { data: settings, isLoading } = useQuery({
@@ -222,6 +236,201 @@ const AdminSettings: React.FC = () => {
     }
   };
 
+  const handleBackfillBacklog = async () => {
+    setBackfillBacklogLoading(true);
+    setBackfillBacklogResult(null);
+    try {
+      const response = await analyticsApi.backfillBacklog(90);
+      setBackfillBacklogResult(response.data);
+      toast.success(response.data.message);
+    } catch (error) {
+      console.error('Failed to backfill backlog:', error);
+      toast.error('Failed to backfill backlog data');
+      setBackfillBacklogResult({
+        message: 'Failed to backfill backlog. Check console for details.',
+        snapshots: []
+      });
+    } finally {
+      setBackfillBacklogLoading(false);
+    }
+  };
+
+  const handleImportBacklog = async () => {
+    if (!importBacklogJson.trim()) {
+      toast.error('Please enter JSON data to import');
+      return;
+    }
+
+    setImportBacklogLoading(true);
+    setImportBacklogResult(null);
+    try {
+      const snapshots = JSON.parse(importBacklogJson);
+      if (!Array.isArray(snapshots)) {
+        throw new Error('JSON must be an array of snapshots');
+      }
+      const response = await analyticsApi.importBacklog(snapshots);
+      setImportBacklogResult(response.data);
+      toast.success(response.data.message);
+      setImportBacklogJson('');
+    } catch (error: any) {
+      console.error('Failed to import backlog:', error);
+      if (error instanceof SyntaxError) {
+        toast.error('Invalid JSON format');
+      } else {
+        toast.error(error.response?.data?.error || error.message || 'Failed to import backlog data');
+      }
+      setImportBacklogResult({
+        message: 'Failed to import backlog. Check console for details.',
+        results: []
+      });
+    } finally {
+      setImportBacklogLoading(false);
+    }
+  };
+
+  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const csvText = event.target?.result as string;
+        const lines = csvText.split('\n').filter(line => line.trim());
+
+        if (lines.length < 2) {
+          toast.error('CSV file is empty or has no data rows');
+          return;
+        }
+
+        // Log first few lines for debugging
+        console.log('[CSV Parser] Header:', lines[0]);
+        console.log('[CSV Parser] First data row:', lines[1]);
+        console.log('[CSV Parser] Total lines:', lines.length);
+
+        // Parse CSV - expected format: "Status","Date","Tickets"
+        const dataByDate: Record<string, { new: number; open: number; pending: number; hold: number }> = {};
+        let parsedRows = 0;
+        let skippedRows = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          // Parse CSV line - split by comma and strip quotes
+          const parts = line.split(',').map(p => p.replace(/^"|"$/g, '').trim());
+          if (parts.length < 3) {
+            skippedRows++;
+            continue;
+          }
+
+          const status = parts[0].toLowerCase();
+          const dateStr = parts[1];
+          const ticketsStr = parts[2];
+
+          // Parse the count (handle empty as 0)
+          const count = ticketsStr ? Math.round(parseFloat(ticketsStr)) : 0;
+
+          // Parse date like "31 Dec 25" or "1 Jan 26" or "31 Dec 2025"
+          let dateMatch = dateStr.match(/(\d{1,2})\s+(\w{3})\s+(\d{2,4})/);
+          if (!dateMatch) {
+            // Try alternate formats like "2025-12-31" or "12/31/25"
+            const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+              const dateKey = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+              if (!dataByDate[dateKey]) {
+                dataByDate[dateKey] = { new: 0, open: 0, pending: 0, hold: 0 };
+              }
+              if (status === 'new') dataByDate[dateKey].new = count;
+              else if (status === 'open') dataByDate[dateKey].open = count;
+              else if (status === 'pending') dataByDate[dateKey].pending = count;
+              else if (status === 'hold' || status === 'on-hold' || status === 'on hold') dataByDate[dateKey].hold = count;
+              parsedRows++;
+              continue;
+            }
+            console.log('[CSV Parser] Could not parse date:', dateStr, 'from line:', line);
+            skippedRows++;
+            continue;
+          }
+
+          const day = parseInt(dateMatch[1]);
+          const monthStr = dateMatch[2];
+          let year = parseInt(dateMatch[3]);
+          if (year < 100) year = 2000 + year; // Handle 2-digit year
+
+          const months: Record<string, number> = {
+            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+          };
+          const month = months[monthStr];
+          if (month === undefined) {
+            console.log('[CSV Parser] Unknown month:', monthStr);
+            skippedRows++;
+            continue;
+          }
+
+          const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+          if (!dataByDate[dateKey]) {
+            dataByDate[dateKey] = { new: 0, open: 0, pending: 0, hold: 0 };
+          }
+
+          // Handle various status names from Zendesk
+          if (status === 'new') dataByDate[dateKey].new = count;
+          else if (status === 'open') dataByDate[dateKey].open = count;
+          else if (status === 'pending') dataByDate[dateKey].pending = count;
+          else if (status === 'hold' || status === 'on-hold' || status === 'on hold') dataByDate[dateKey].hold = count;
+          else {
+            console.log('[CSV Parser] Unknown status:', status);
+          }
+          parsedRows++;
+        }
+
+        console.log('[CSV Parser] Parsed rows:', parsedRows, 'Skipped rows:', skippedRows);
+
+        // Convert to array format
+        const snapshots = Object.entries(dataByDate)
+          .map(([date, counts]) => ({
+            date,
+            ...counts
+          }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        if (snapshots.length === 0) {
+          toast.error('No valid data found in CSV. Check browser console for details.');
+          return;
+        }
+
+        // Automatically import after parsing
+        console.log('[CSV Parser] Importing', snapshots.length, 'snapshots');
+        setImportBacklogLoading(true);
+        setImportBacklogResult(null);
+
+        try {
+          const response = await analyticsApi.importBacklog(snapshots);
+          setImportBacklogResult(response.data);
+          toast.success(response.data.message);
+        } catch (importError: any) {
+          console.error('Failed to import backlog:', importError);
+          toast.error(importError.response?.data?.error || importError.message || 'Failed to import backlog data');
+          setImportBacklogResult({
+            message: 'Failed to import backlog. Check console for details.',
+            results: []
+          });
+        } finally {
+          setImportBacklogLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to parse CSV:', error);
+        toast.error('Failed to parse CSV file');
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset file input so same file can be selected again
+    if (backlogFileInputRef.current) {
+      backlogFileInputRef.current.value = '';
+    }
+  };
+
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!settings?.id) throw new Error('Settings not loaded');
@@ -267,7 +476,10 @@ const AdminSettings: React.FC = () => {
       setTicketImportResult(result);
 
       if (result.success) {
-        toast.success(`Successfully imported ${result.imported} tickets`);
+        const messages = [];
+        if (result.imported > 0) messages.push(`${result.imported} imported`);
+        if (result.updated > 0) messages.push(`${result.updated} updated`);
+        toast.success(`Successfully processed tickets: ${messages.join(', ')}`);
         if (result.skipped > 0) {
           toast.error(`${result.skipped} tickets were skipped due to errors`);
         }
@@ -880,11 +1092,11 @@ const AdminSettings: React.FC = () => {
                     {ticketImportResult.success && (
                       <div className="mt-2 text-sm text-green-700 dark:text-green-400">
                         <p>Imported: {ticketImportResult.imported} tickets</p>
+                        {ticketImportResult.updated > 0 && (
+                          <p>Updated: {ticketImportResult.updated} tickets</p>
+                        )}
                         {ticketImportResult.usersCreated > 0 && (
                           <p>Users created: {ticketImportResult.usersCreated}</p>
-                        )}
-                        {ticketImportResult.duplicates > 0 && (
-                          <p>Duplicates skipped: {ticketImportResult.duplicates}</p>
                         )}
                         {ticketImportResult.skipped > 0 && (
                           <p>Errors: {ticketImportResult.skipped} tickets</p>
@@ -922,7 +1134,7 @@ const AdminSettings: React.FC = () => {
                 <button
                   onClick={handleResetTicketSequence}
                   disabled={isResettingSequence}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isResettingSequence ? (
                     <>
@@ -958,6 +1170,108 @@ const AdminSettings: React.FC = () => {
                         : sequenceResetResult.error
                       }
                     </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Horizontal separator */}
+              <hr className="border-gray-200 dark:border-gray-700" />
+
+              {/* Import Historical Backlog Data */}
+              <div className="pb-8">
+                <h3 className="text-md font-medium text-gray-900 dark:text-white mb-2">
+                  Import Historical Backlog Data
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Import historical backlog data from a Zendesk CSV export. The CSV should have columns: Status, Date, Tickets.
+                </p>
+
+                <input
+                  ref={backlogFileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCsvUpload}
+                  disabled={importBacklogLoading}
+                  className="hidden"
+                />
+
+                <button
+                  onClick={() => backlogFileInputRef.current?.click()}
+                  disabled={importBacklogLoading}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {importBacklogLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Import Backlog CSV
+                    </>
+                  )}
+                </button>
+
+                {importBacklogResult && (
+                  <div className={`mt-4 p-4 rounded-md ${
+                    importBacklogResult.results.some(r => r.status === 'imported')
+                      ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                      : 'bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600'
+                  }`}>
+                    <p className={`text-sm font-medium ${
+                      importBacklogResult.results.some(r => r.status === 'imported')
+                        ? 'text-green-800 dark:text-green-300'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      {importBacklogResult.message}
+                    </p>
+                    {importBacklogResult.results.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-2">Imported snapshots:</p>
+                        <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                          <table className="min-w-full text-xs">
+                            <thead className="sticky top-0 bg-green-50 dark:bg-green-900">
+                              <tr className="text-left text-gray-600 dark:text-gray-400">
+                                <th className="pr-4 py-1">Date</th>
+                                <th className="pr-4 py-1">New</th>
+                                <th className="pr-4 py-1">Open</th>
+                                <th className="pr-4 py-1">Pending</th>
+                                <th className="pr-4 py-1">Hold</th>
+                                <th className="pr-4 py-1">Total</th>
+                                <th className="py-1">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="text-gray-800 dark:text-gray-200">
+                              {importBacklogResult.results.map((result) => (
+                                <tr key={result.date}>
+                                  <td className="pr-4 py-1">{result.date}</td>
+                                  <td className="pr-4 py-1">{result.new}</td>
+                                  <td className="pr-4 py-1">{result.open}</td>
+                                  <td className="pr-4 py-1">{result.pending}</td>
+                                  <td className="pr-4 py-1">{result.hold}</td>
+                                  <td className="pr-4 py-1 font-medium">{result.total}</td>
+                                  <td className="py-1">
+                                    <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                      result.status === 'imported'
+                                        ? 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300'
+                                        : 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-300'
+                                    }`}>
+                                      {result.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1714,6 +2028,95 @@ const AdminSettings: React.FC = () => {
                         {backfillFormsResult.skippedMultipleForms > 0 && (
                           <p>Skipped (ambiguous): {backfillFormsResult.skippedMultipleForms}</p>
                         )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Backfill Backlog Snapshots */}
+              <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                        <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-md font-medium text-gray-900 dark:text-white">Backfill Backlog Snapshots</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Generate historical backlog data for the analytics charts (90 days).
+                      This creates daily snapshots of ticket counts by status.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleBackfillBacklog}
+                    disabled={backfillBacklogLoading}
+                    className="ml-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {backfillBacklogLoading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Run Backfill
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {backfillBacklogResult && (
+                  <div className={`mt-4 p-4 rounded-md ${
+                    backfillBacklogResult.snapshots.length > 0
+                      ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                      : 'bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600'
+                  }`}>
+                    <p className={`text-sm font-medium ${
+                      backfillBacklogResult.snapshots.length > 0
+                        ? 'text-green-800 dark:text-green-300'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      {backfillBacklogResult.message}
+                    </p>
+                    {backfillBacklogResult.snapshots.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-2">Sample snapshots (first 10):</p>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-xs">
+                            <thead>
+                              <tr className="text-left text-gray-600 dark:text-gray-400">
+                                <th className="pr-4 py-1">Date</th>
+                                <th className="pr-4 py-1">New</th>
+                                <th className="pr-4 py-1">Open</th>
+                                <th className="pr-4 py-1">Pending</th>
+                                <th className="pr-4 py-1">Hold</th>
+                                <th className="py-1">Total</th>
+                              </tr>
+                            </thead>
+                            <tbody className="text-gray-800 dark:text-gray-200">
+                              {backfillBacklogResult.snapshots.map((snapshot) => (
+                                <tr key={snapshot.date}>
+                                  <td className="pr-4 py-1">{snapshot.date}</td>
+                                  <td className="pr-4 py-1">{snapshot.new}</td>
+                                  <td className="pr-4 py-1">{snapshot.open}</td>
+                                  <td className="pr-4 py-1">{snapshot.pending}</td>
+                                  <td className="pr-4 py-1">{snapshot.hold}</td>
+                                  <td className="py-1 font-medium">{snapshot.total}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -64,6 +64,10 @@ const AnalyticsDashboard: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [countryYear, setCountryYear] = useState<number>(new Date().getFullYear());
   const [formYear, setFormYear] = useState<number>(new Date().getFullYear());
+  const [channelYear, setChannelYear] = useState<number>(new Date().getFullYear());
+  const [priorityYear, setPriorityYear] = useState<number>(new Date().getFullYear());
+  const [weekdayYear, setWeekdayYear] = useState<number>(new Date().getFullYear());
+  const [hourlyYear, setHourlyYear] = useState<number>(new Date().getFullYear());
 
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboardAnalytics'],
@@ -110,7 +114,58 @@ const AnalyticsDashboard: React.FC = () => {
     refetchInterval: 60000
   });
 
+  const { data: backlogHistoryData } = useQuery({
+    queryKey: ['backlogHistory'],
+    queryFn: async () => {
+      const response = await analyticsApi.getBacklogHistory();
+      return response.data;
+    },
+    refetchInterval: 60000
+  });
+
+  const { data: channelByYearData } = useQuery({
+    queryKey: ['channelByYear', channelYear],
+    queryFn: async () => {
+      const response = await analyticsApi.getChannelByYear(channelYear);
+      return response.data;
+    },
+    refetchInterval: 60000
+  });
+
+  const { data: priorityByYearData } = useQuery({
+    queryKey: ['priorityByYear', priorityYear],
+    queryFn: async () => {
+      const response = await analyticsApi.getPriorityByYear(priorityYear);
+      return response.data;
+    },
+    refetchInterval: 60000
+  });
+
+  const { data: weekdayByYearData } = useQuery({
+    queryKey: ['weekdayByYear', weekdayYear],
+    queryFn: async () => {
+      const response = await analyticsApi.getWeekdayByYear(weekdayYear);
+      return response.data;
+    },
+    refetchInterval: 60000
+  });
+
+  const { data: hourlyByYearData } = useQuery({
+    queryKey: ['hourlyByYear', hourlyYear],
+    queryFn: async () => {
+      const response = await analyticsApi.getHourlyByYear(hourlyYear);
+      return response.data;
+    },
+    refetchInterval: 60000
+  });
+
   // Color schemes for different charts
+  const BACKLOG_COLORS = {
+    new: '#F59E0B',      // Yellow/Amber
+    open: '#EF4444',     // Red
+    pending: '#3B82F6',  // Blue
+    hold: '#4B5563'      // Gray/Teal
+  };
   const PRIORITY_COLORS = {
     LOW: '#10B981',      // Green
     NORMAL: '#3B82F6',   // Blue
@@ -355,17 +410,29 @@ const AnalyticsDashboard: React.FC = () => {
 
           {/* Tickets by Priority - Horizontal Bar Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Priority</h3>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Priority</h3>
+              {/* Year Selector */}
+              <select
+                value={priorityYear}
+                onChange={(e) => setPriorityYear(Number(e.target.value))}
+                className="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {(priorityByYearData?.availableYears || [new Date().getFullYear()]).map((year: number) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart
-                data={charts.priority.map((p: any) => ({ ...p, name: p.label || p.name }))}
+                data={(priorityByYearData?.data || charts.priority).map((p: any) => ({ ...p, name: p.label || p.name }))}
                 layout="vertical"
                 margin={{ left: 20, right: 40 }}
               >
@@ -374,7 +441,7 @@ const AnalyticsDashboard: React.FC = () => {
                 <YAxis type="category" dataKey="name" className="text-xs" width={70} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="value" radius={[0, 8, 8, 0]} label={{ position: 'right', fill: '#6B7280', fontSize: 12, fontWeight: 600 }}>
-                  {charts.priority.map((entry: any, index: number) => (
+                  {(priorityByYearData?.data || charts.priority).map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={PRIORITY_COLORS[entry.name as keyof typeof PRIORITY_COLORS] || '#6B7280'} />
                   ))}
                 </Bar>
@@ -427,18 +494,30 @@ const AnalyticsDashboard: React.FC = () => {
 
           {/* Tickets by Channel */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-500 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                </svg>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-500 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Channel</h3>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Channel</h3>
+              {/* Year Selector */}
+              <select
+                value={channelYear}
+                onChange={(e) => setChannelYear(Number(e.target.value))}
+                className="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {(channelByYearData?.availableYears || [new Date().getFullYear()]).map((year: number) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             </div>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={charts.channel}
+                  data={channelByYearData?.data || charts.channel}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -448,7 +527,7 @@ const AnalyticsDashboard: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {charts.channel.map((entry: any, index: number) => (
+                  {(channelByYearData?.data || charts.channel).map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={CHANNEL_COLORS[entry.name as keyof typeof CHANNEL_COLORS] || '#6B7280'} />
                   ))}
                 </Pie>
@@ -459,18 +538,30 @@ const AnalyticsDashboard: React.FC = () => {
           </div>
 
           {/* Tickets by Weekday */}
-          {charts.weekday && charts.weekday.length > 0 && (
+          {(weekdayByYearData?.data || charts.weekday) && (weekdayByYearData?.data || charts.weekday).length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Day of Week</h3>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Day of Week</h3>
+                {/* Year Selector */}
+                <select
+                  value={weekdayYear}
+                  onChange={(e) => setWeekdayYear(Number(e.target.value))}
+                  className="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {(weekdayByYearData?.availableYears || [new Date().getFullYear()]).map((year: number) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={charts.weekday}>
+                <BarChart data={weekdayByYearData?.data || charts.weekday}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-xs" />
                   <YAxis className="text-xs" />
@@ -488,18 +579,30 @@ const AnalyticsDashboard: React.FC = () => {
           )}
 
           {/* Tickets by Hour of Day */}
-          {charts.hourly && charts.hourly.length > 0 && (
+          {(hourlyByYearData?.data || charts.hourly) && (hourlyByYearData?.data || charts.hourly).length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Hour of Day</h3>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tickets by Hour of Day</h3>
+                {/* Year Selector */}
+                <select
+                  value={hourlyYear}
+                  onChange={(e) => setHourlyYear(Number(e.target.value))}
+                  className="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {(hourlyByYearData?.availableYears || [new Date().getFullYear()]).map((year: number) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={charts.hourly}>
+                <BarChart data={hourlyByYearData?.data || charts.hourly}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="label" className="text-xs" />
                   <YAxis className="text-xs" />
@@ -581,6 +684,114 @@ const AnalyticsDashboard: React.FC = () => {
                 <Line type="monotone" dataKey="solved" stroke="#10B981" strokeWidth={3} name="Solved" dot={{ fill: '#10B981', r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Historical Backlog Charts */}
+        {backlogHistoryData && (
+          <div className="grid grid-cols-1 gap-6">
+            {/* Daily Historical Backlog by Status (30 days) */}
+            {backlogHistoryData.daily && backlogHistoryData.daily.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Daily historical backlog by status (30 days)</h3>
+                </div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BACKLOG_COLORS.new }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">New</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BACKLOG_COLORS.open }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Open</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BACKLOG_COLORS.pending }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Pending</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BACKLOG_COLORS.hold }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Hold</span>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={backlogHistoryData.daily}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                    <XAxis
+                      dataKey="date"
+                      className="text-xs"
+                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                      interval={2}
+                    />
+                    <YAxis className="text-xs" />
+                    <Tooltip
+                      content={<CustomTooltip />}
+                      labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    />
+                    <Bar dataKey="new" stackId="backlog" fill={BACKLOG_COLORS.new} name="New" />
+                    <Bar dataKey="open" stackId="backlog" fill={BACKLOG_COLORS.open} name="Open" />
+                    <Bar dataKey="pending" stackId="backlog" fill={BACKLOG_COLORS.pending} name="Pending" />
+                    <Bar dataKey="hold" stackId="backlog" fill={BACKLOG_COLORS.hold} name="Hold" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Weekly Historical Backlog by Status (12 weeks) */}
+            {backlogHistoryData.weekly && backlogHistoryData.weekly.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Weekly historical backlog by status (12 weeks)</h3>
+                </div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BACKLOG_COLORS.new }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">New</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BACKLOG_COLORS.open }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Open</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BACKLOG_COLORS.pending }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Pending</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BACKLOG_COLORS.hold }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Hold</span>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={backlogHistoryData.weekly}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                    <XAxis
+                      dataKey="weekStart"
+                      className="text-xs"
+                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                    />
+                    <YAxis className="text-xs" />
+                    <Tooltip
+                      content={<CustomTooltip />}
+                      labelFormatter={(value) => `Week of ${new Date(value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`}
+                    />
+                    <Bar dataKey="new" stackId="backlog" fill={BACKLOG_COLORS.new} name="New" />
+                    <Bar dataKey="open" stackId="backlog" fill={BACKLOG_COLORS.open} name="Open" />
+                    <Bar dataKey="pending" stackId="backlog" fill={BACKLOG_COLORS.pending} name="Pending" />
+                    <Bar dataKey="hold" stackId="backlog" fill={BACKLOG_COLORS.hold} name="Hold" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         )}
 

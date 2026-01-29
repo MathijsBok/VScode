@@ -189,6 +189,35 @@ export const analyticsApi = {
   getAgentSessions: (agentId: string, limit?: number) =>
     api.get(`/analytics/agents/${agentId}/sessions`, {
       params: { limit }
+    }),
+
+  getBacklogHistory: () =>
+    api.get('/analytics/backlog-history'),
+
+  backfillBacklog: (days?: number) =>
+    api.post('/analytics/backfill-backlog', { days: days || 90 }),
+
+  importBacklog: (snapshots: Array<{ date: string; new: number; open: number; pending: number; hold: number }>) =>
+    api.post('/analytics/import-backlog', { snapshots }),
+
+  getChannelByYear: (year?: number) =>
+    api.get('/analytics/channel-by-year', {
+      params: { year }
+    }),
+
+  getPriorityByYear: (year?: number) =>
+    api.get('/analytics/priority-by-year', {
+      params: { year }
+    }),
+
+  getWeekdayByYear: (year?: number) =>
+    api.get('/analytics/weekday-by-year', {
+      params: { year }
+    }),
+
+  getHourlyByYear: (year?: number) =>
+    api.get('/analytics/hourly-by-year', {
+      params: { year }
     })
 };
 
