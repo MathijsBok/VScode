@@ -867,7 +867,7 @@ const TicketDetail: React.FC = () => {
         {/* Two-column layout for desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Left Column - Form Details, Macros, Activity Log (sticky on desktop) */}
-          <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pb-4">
+          <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-4 lg:self-start">
             {/* AI Summary Section - Agents and Admins only, when AI is enabled */}
             {(userRole === 'AGENT' || userRole === 'ADMIN') && aiSettings?.enabled && aiSettings?.configured && (
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
