@@ -128,15 +128,34 @@ const AgentDashboard: React.FC = () => {
     };
   }, [activeSessionId, endCurrentSession]);
 
-  const { data: tickets, isLoading } = useQuery({
-    queryKey: ['agentTickets', statusFilter],
+  // Debounced search query for server
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { data: ticketResponse, isLoading } = useQuery({
+    queryKey: ['agentTickets', statusFilter, currentPage, itemsPerPage, sortField, sortDirection, debouncedSearch],
     queryFn: async () => {
-      const response = await ticketApi.getAll(
-        statusFilter ? { status: statusFilter } : undefined
-      );
+      const response = await ticketApi.getAll({
+        status: statusFilter || undefined,
+        page: currentPage,
+        limit: itemsPerPage,
+        sortField,
+        sortDirection,
+        search: debouncedSearch || undefined
+      });
       return response.data;
-    }
+    },
+    placeholderData: (previousData) => previousData // Keep previous data while loading
   });
+
+  const tickets = ticketResponse?.tickets || [];
+  const pagination = ticketResponse?.pagination;
 
   const { data: stats } = useQuery({
     queryKey: ['ticketStats'],
@@ -153,95 +172,22 @@ const AgentDashboard: React.FC = () => {
       setSortField(field);
       setSortDirection('asc');
     }
+    setCurrentPage(1); // Reset to page 1 when sorting changes
   };
 
-  const sortedTickets = useMemo(() => {
-    if (!tickets) return [];
-
-    return [...tickets].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortField) {
-        case 'ticketNumber':
-          aValue = a.ticketNumber;
-          bValue = b.ticketNumber;
-          break;
-        case 'subject':
-          aValue = a.subject.toLowerCase();
-          bValue = b.subject.toLowerCase();
-          break;
-        case 'requester':
-          aValue = (a.requester.name || a.requester.email).toLowerCase();
-          bValue = (b.requester.name || b.requester.email).toLowerCase();
-          break;
-        case 'status':
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        case 'priority':
-          const priorityOrder = { LOW: 0, NORMAL: 1, HIGH: 2, URGENT: 3 };
-          aValue = priorityOrder[a.priority as keyof typeof priorityOrder];
-          bValue = priorityOrder[b.priority as keyof typeof priorityOrder];
-          break;
-        case 'assignee':
-          aValue = a.assignee ? a.assignee.email.toLowerCase() : '';
-          bValue = b.assignee ? b.assignee.email.toLowerCase() : '';
-          break;
-        case 'updatedAt':
-          aValue = new Date(a.updatedAt).getTime();
-          bValue = new Date(b.updatedAt).getTime();
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [tickets, sortField, sortDirection]);
-
-  // Filter tickets based on search query
-  const filteredTickets = useMemo(() => {
-    if (!searchQuery.trim()) return sortedTickets;
-
-    const query = searchQuery.toLowerCase().trim();
-    return sortedTickets.filter((ticket: any) => {
-      const ticketNumber = `#${ticket.ticketNumber}`.toLowerCase();
-      const subject = ticket.subject.toLowerCase();
-      const requesterEmail = ticket.requester.email.toLowerCase();
-      const requesterName = (ticket.requester.name || '').toLowerCase();
-      const assigneeEmail = (ticket.assignee?.email || '').toLowerCase();
-      const assigneeName = ticket.assignee
-        ? `${ticket.assignee.firstName || ''} ${ticket.assignee.lastName || ''}`.trim().toLowerCase()
-        : '';
-
-      return (
-        ticketNumber.includes(query) ||
-        subject.includes(query) ||
-        requesterEmail.includes(query) ||
-        requesterName.includes(query) ||
-        assigneeEmail.includes(query) ||
-        assigneeName.includes(query)
-      );
-    });
-  }, [sortedTickets, searchQuery]);
-
-  // Reset to page 1 when filters or sorting changes
+  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, sortField, sortDirection, searchQuery]);
+  }, [statusFilter, debouncedSearch]);
 
-  // Pagination calculations
-  const totalTickets = filteredTickets?.length || 0;
-  const totalPages = Math.ceil(totalTickets / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalTickets);
+  // Pagination from server response
+  const totalTickets = pagination?.totalCount || 0;
+  const totalPages = pagination?.totalPages || 1;
+  const startIndex = ((pagination?.page || 1) - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + tickets.length, totalTickets);
 
-  const paginatedTickets = useMemo(() => {
-    return filteredTickets.slice(startIndex, endIndex);
-  }, [filteredTickets, startIndex, endIndex]);
+  // Tickets are already paginated from server
+  const paginatedTickets = tickets;
 
   // Handle page changes
   const handlePageChange = (page: number) => {

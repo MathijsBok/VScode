@@ -7,12 +7,17 @@ import { getOrCreateEmailThread, sendTicketCreatedEmail, sendTicketResolvedEmail
 
 const router = Router();
 
-// Get all tickets (with filters for agents)
+// Get all tickets (with filters and pagination for agents)
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { status, assigneeId, requesterId } = req.query;
+    const { status, assigneeId, requesterId, page, limit, sortField, sortDirection, search } = req.query;
     const userRole = req.userRole;
     const userId = req.userId;
+
+    // Pagination defaults
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 25));
+    const skip = (pageNum - 1) * limitNum;
 
     const where: any = {};
 
@@ -34,6 +39,28 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       where.requesterId = requesterId;
     }
 
+    // Search filter (searches ticket number, subject, requester email/name)
+    if (search && typeof search === 'string' && search.trim()) {
+      const searchTerm = search.trim();
+      const searchNum = parseInt(searchTerm);
+
+      where.OR = [
+        { subject: { contains: searchTerm, mode: 'insensitive' } },
+        { requester: { email: { contains: searchTerm, mode: 'insensitive' } } },
+        { requester: { firstName: { contains: searchTerm, mode: 'insensitive' } } },
+        { requester: { lastName: { contains: searchTerm, mode: 'insensitive' } } },
+        ...(isNaN(searchNum) ? [] : [{ ticketNumber: searchNum }])
+      ];
+    }
+
+    // Sorting
+    const validSortFields = ['ticketNumber', 'subject', 'status', 'priority', 'createdAt', 'updatedAt'];
+    const sortBy = validSortFields.includes(sortField as string) ? sortField as string : 'updatedAt';
+    const sortDir = sortDirection === 'asc' ? 'asc' : 'desc';
+
+    // Get total count for pagination
+    const totalCount = await prisma.ticket.count({ where });
+
     const tickets = await prisma.ticket.findMany({
       where,
       include: {
@@ -49,10 +76,20 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
           select: { comments: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { [sortBy]: sortDir },
+      skip,
+      take: limitNum
     });
 
-    return res.json(tickets);
+    return res.json({
+      tickets,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limitNum)
+      }
+    });
   } catch (error) {
     console.error('Error fetching tickets:', error);
     return res.status(500).json({ error: 'Failed to fetch tickets' });

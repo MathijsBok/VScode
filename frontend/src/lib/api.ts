@@ -20,7 +20,15 @@ api.interceptors.request.use(async (config) => {
 
 // Ticket API
 export const ticketApi = {
-  getAll: (params?: { status?: string; assigneeId?: string }) =>
+  getAll: (params?: {
+    status?: string;
+    assigneeId?: string;
+    page?: number;
+    limit?: number;
+    sortField?: string;
+    sortDirection?: string;
+    search?: string;
+  }) =>
     api.get('/tickets', { params }),
 
   getById: (id: string) =>
