@@ -55,20 +55,24 @@ const upload = multer({
 });
 
 // Wrapper to handle multer errors
-const handleUpload = (req: AuthRequest, res: Response, next: NextFunction) => {
-  upload.array('attachments', 5)(req, res, (err: any) => {
+const handleUpload = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  upload.array('attachments', 5)(req, res, (err: any): void => {
     if (err) {
       console.error('Multer error:', err);
       if (err instanceof MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+          res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+          return;
         }
         if (err.code === 'LIMIT_FILE_COUNT') {
-          return res.status(400).json({ error: 'Too many files. Maximum is 5 files.' });
+          res.status(400).json({ error: 'Too many files. Maximum is 5 files.' });
+          return;
         }
-        return res.status(400).json({ error: `Upload error: ${err.message}` });
+        res.status(400).json({ error: `Upload error: ${err.message}` });
+        return;
       }
-      return res.status(400).json({ error: err.message || 'File upload failed' });
+      res.status(400).json({ error: err.message || 'File upload failed' });
+      return;
     }
     next();
   });
