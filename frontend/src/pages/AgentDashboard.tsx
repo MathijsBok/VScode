@@ -639,7 +639,7 @@ const AgentDashboard: React.FC = () => {
         )}
 
         {/* Tickets table */}
-        {filteredTickets && filteredTickets.length > 0 && (
+        {paginatedTickets && paginatedTickets.length > 0 && (
           <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ tableLayout: 'fixed' }}>
@@ -911,7 +911,7 @@ const AgentDashboard: React.FC = () => {
         )}
 
         {/* Empty state */}
-        {filteredTickets && filteredTickets.length === 0 && (
+        {paginatedTickets && paginatedTickets.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
