@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import readline from 'readline';
 
 const prisma = new PrismaClient();
@@ -36,7 +36,7 @@ async function createUser() {
         email,
         firstName: firstName || null,
         lastName: lastName || null,
-        role
+        role: role as UserRole
       }
     });
 

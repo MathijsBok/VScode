@@ -114,7 +114,6 @@ const AdminSettings: React.FC = () => {
   } | null>(null);
   // Import Backlog state
   const [importBacklogLoading, setImportBacklogLoading] = useState(false);
-  const [importBacklogJson, setImportBacklogJson] = useState('');
   const [importBacklogResult, setImportBacklogResult] = useState<{
     message: string;
     results: Array<{ date: string; new: number; open: number; pending: number; hold: number; total: number; status: string }>;
@@ -576,39 +575,6 @@ const AdminSettings: React.FC = () => {
       });
     } finally {
       setBackfillAiSummaryLoading(false);
-    }
-  };
-
-  const handleImportBacklog = async () => {
-    if (!importBacklogJson.trim()) {
-      toast.error('Please enter JSON data to import');
-      return;
-    }
-
-    setImportBacklogLoading(true);
-    setImportBacklogResult(null);
-    try {
-      const snapshots = JSON.parse(importBacklogJson);
-      if (!Array.isArray(snapshots)) {
-        throw new Error('JSON must be an array of snapshots');
-      }
-      const response = await analyticsApi.importBacklog(snapshots);
-      setImportBacklogResult(response.data);
-      toast.success(response.data.message);
-      setImportBacklogJson('');
-    } catch (error: any) {
-      console.error('Failed to import backlog:', error);
-      if (error instanceof SyntaxError) {
-        toast.error('Invalid JSON format');
-      } else {
-        toast.error(error.response?.data?.error || error.message || 'Failed to import backlog data');
-      }
-      setImportBacklogResult({
-        message: 'Failed to import backlog. Check console for details.',
-        results: []
-      });
-    } finally {
-      setImportBacklogLoading(false);
     }
   };
 

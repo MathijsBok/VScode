@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsApi, adminAnalyticsApi, aiSummaryAnalyticsApi } from '../lib/api';
 import Layout from '../components/Layout';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, TooltipProps } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from 'recharts';
 
 // Format label - handles ISO dates and other formats
 const formatLabel = (label: any): string => {
@@ -18,8 +18,15 @@ const formatLabel = (label: any): string => {
   return str;
 };
 
+// Custom tooltip props interface for recharts
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; color: string }>;
+  label?: string;
+}
+
 // Custom Tooltip Component with proper dark mode support
-const CustomTooltip: React.FC<TooltipProps<any, any>> = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     // Detect dark mode by checking if html element has 'dark' class
     const isDarkMode = document.documentElement.classList.contains('dark');

@@ -65,7 +65,7 @@ const TicketDetail: React.FC = () => {
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const [selectedAttachment, setSelectedAttachment] = useState<Attachment | null>(null);
-  const [attachmentLoading, setAttachmentLoading] = useState(false);
+  const [_attachmentLoading, setAttachmentLoading] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [selectedMergeTarget, setSelectedMergeTarget] = useState<string | null>(null);
   const [mergeComment, setMergeComment] = useState('');
@@ -248,7 +248,7 @@ const TicketDetail: React.FC = () => {
 
   const assignToAgentMutation = useMutation({
     mutationFn: async (assigneeId: string | null) => {
-      const response = await ticketApi.update(id!, { assigneeId });
+      const response = await ticketApi.update(id!, { assigneeId: assigneeId || undefined });
       return response.data;
     },
     onSuccess: () => {

@@ -194,7 +194,7 @@ const AdminForms: React.FC = () => {
     setDraggedIndex(index);
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
+  const handleDragEnd = () => {
     setDraggedIndex(null);
   };
 
@@ -236,7 +236,7 @@ const AdminForms: React.FC = () => {
     setDraggedFormIndex(index);
   };
 
-  const handleFormDragEnd = (e: React.DragEvent) => {
+  const handleFormDragEnd = () => {
     if (draggedFormIndex !== null && forms) {
       // Send the new order to the server
       const formIds = forms.map(form => form.id);
@@ -406,7 +406,7 @@ const AdminForms: React.FC = () => {
                             draggable
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={(e) => handleDragOver(e, index)}
-                            onDragEnd={(e) => handleDragEnd(e)}
+                            onDragEnd={handleDragEnd}
                             className={`flex items-center cursor-move transition-all ${
                               draggedIndex === index
                                 ? 'bg-primary text-primary-foreground border-2 border-primary scale-105 shadow-lg opacity-100'
