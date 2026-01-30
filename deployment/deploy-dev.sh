@@ -13,7 +13,7 @@ echo "========================================"
 echo ""
 
 APP_DIR="/var/www/ticket-system-dev"
-REPO_URL="git@github.com:MathijsBok/ticket-system.git"
+REPO_URL="git@github.com:klever-io/ticket-system.git"
 BRANCH="develop"
 
 # Colors for output

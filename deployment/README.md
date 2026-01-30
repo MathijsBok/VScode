@@ -46,12 +46,12 @@ sudo ./server-setup.sh
 ```bash
 # Development
 cd /var/www/ticket-system-dev
-git clone git@github.com:MathijsBok/ticket-system.git .
+git clone git@github.com:klever-io/ticket-system.git .
 git checkout develop
 
 # Production
 cd /var/www/ticket-system-prod
-git clone git@github.com:MathijsBok/ticket-system.git .
+git clone git@github.com:klever-io/ticket-system.git .
 git checkout main
 ```
 
