@@ -272,6 +272,16 @@ export interface AgentForMention {
   role: UserRole;
 }
 
+// Bug attachment
+export interface BugAttachment {
+  id: string;
+  bugId: string;
+  filename: string;
+  fileSize: string;
+  mimeType: string;
+  createdAt: string;
+}
+
 // Bug report
 export interface Bug {
   id: string;
@@ -298,4 +308,5 @@ export interface Bug {
     lastName?: string;
     role: UserRole;
   };
+  attachments?: BugAttachment[];
 }

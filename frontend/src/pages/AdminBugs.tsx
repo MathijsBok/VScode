@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@clerk/clerk-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -8,6 +8,8 @@ import Layout from '../components/Layout';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
+const ALLOWED_EXTENSIONS = '.png,.jpg,.jpeg,.gif,.webp,.bmp,.svg,.mp4,.webm,.mov,.avi';
+
 const AdminBugs: React.FC = () => {
   const { user } = useUser();
   const queryClient = useQueryClient();
@@ -15,10 +17,12 @@ const AdminBugs: React.FC = () => {
   const navigate = useNavigate();
   const userRole = (user?.publicMetadata?.role as string) || 'USER';
   const isAdmin = userRole === 'ADMIN';
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [bugType, setBugType] = useState<BugType>('TECHNICAL');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   // Determine state from URL
   const showAddForm = id === 'new';
@@ -33,7 +37,7 @@ const AdminBugs: React.FC = () => {
   });
 
   const createBugMutation = useMutation({
-    mutationFn: (data: { title: string; description: string; type: BugType }) => bugApi.create(data),
+    mutationFn: (data: { title: string; description: string; type: BugType; attachments?: File[] }) => bugApi.create(data),
     onSuccess: () => {
       toast.success('Bug reported successfully');
       queryClient.invalidateQueries({ queryKey: ['bugs'] });
@@ -41,6 +45,7 @@ const AdminBugs: React.FC = () => {
       setTitle('');
       setDescription('');
       setBugType('TECHNICAL');
+      setSelectedFiles([]);
     },
     onError: (error: any) => {
       const message = error?.response?.data?.error || 'Failed to report bug';
@@ -88,13 +93,42 @@ const AdminBugs: React.FC = () => {
     }
   });
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + selectedFiles.length > 5) {
+      toast.error('Maximum 5 files allowed');
+      return;
+    }
+    setSelectedFiles(prev => [...prev, ...files]);
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number | string) => {
+    const size = typeof bytes === 'string' ? parseInt(bytes) : bytes;
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
-    createBugMutation.mutate({ title: title.trim(), description: description.trim(), type: bugType });
+    createBugMutation.mutate({
+      title: title.trim(),
+      description: description.trim(),
+      type: bugType,
+      attachments: selectedFiles.length > 0 ? selectedFiles : undefined
+    });
   };
 
   const getUserName = (reportedBy: Bug['reportedBy']) => {
@@ -138,6 +172,11 @@ const AdminBugs: React.FC = () => {
               }`}>
                 {isSolved ? 'SOLVED' : 'OPEN'}
               </span>
+              {bug.attachments && bug.attachments.length > 0 && (
+                <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                  {bug.attachments.length} file{bug.attachments.length > 1 ? 's' : ''}
+                </span>
+              )}
               <h3 className={`text-base font-medium text-gray-900 dark:text-white truncate ${isSolved ? 'line-through' : ''}`}>
                 {bug.title}
               </h3>
@@ -217,6 +256,47 @@ const AdminBugs: React.FC = () => {
               {bug.description}
             </p>
           </div>
+          {/* Attachments */}
+          {bug.attachments && bug.attachments.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Attachments</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {bug.attachments.map(attachment => {
+                  const isImage = attachment.mimeType.startsWith('image/');
+                  const isVideo = attachment.mimeType.startsWith('video/');
+                  return (
+                    <a
+                      key={attachment.id}
+                      href={bugApi.viewAttachment(attachment.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-primary transition-colors"
+                    >
+                      {isImage && (
+                        <img
+                          src={bugApi.viewAttachment(attachment.id)}
+                          alt={attachment.filename}
+                          className="w-full h-24 object-cover"
+                        />
+                      )}
+                      {isVideo && (
+                        <div className="w-full h-24 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                          <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="p-2 bg-gray-50 dark:bg-gray-800">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{attachment.filename}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{formatFileSize(attachment.fileSize)}</p>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -357,6 +437,61 @@ const AdminBugs: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none"
                 />
               </div>
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Attachments (optional)
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={ALLOWED_EXTENSIONS}
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="bug-attachments"
+                  />
+                  <label
+                    htmlFor="bug-attachments"
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    Add Files
+                  </label>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Images and videos only (max 5 files, 10MB each)
+                  </span>
+                </div>
+                {selectedFiles.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-md"
+                      >
+                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[150px]">
+                          {file.name}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          ({formatFileSize(file.size)})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
@@ -365,6 +500,7 @@ const AdminBugs: React.FC = () => {
                     setTitle('');
                     setDescription('');
                     setBugType('TECHNICAL');
+                    setSelectedFiles([]);
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                 >

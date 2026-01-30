@@ -74,6 +74,7 @@ model User {
   notifications   Notification[]
   bugsReported    Bug[]             @relation("BugReporter")
   bugsSolved      Bug[]             @relation("BugSolver")
+  bugAttachments  BugAttachment[]   @relation("BugAttachmentUploader")
   apiKeys         ApiKey[]          @relation("ApiKeyCreator")
   chatSessions    ChatSession[]
 
@@ -480,13 +481,31 @@ model Bug {
   solvedAt    DateTime?
   updatedAt   DateTime  @updatedAt
 
-  reportedBy User  @relation("BugReporter", fields: [reportedById], references: [id])
-  solvedBy   User? @relation("BugSolver", fields: [solvedById], references: [id])
+  reportedBy  User            @relation("BugReporter", fields: [reportedById], references: [id])
+  solvedBy    User?           @relation("BugSolver", fields: [solvedById], references: [id])
+  attachments BugAttachment[]
 
   @@index([status])
   @@index([type])
   @@index([reportedById])
   @@index([createdAt])
+}
+
+// Bug attachments
+model BugAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  bugId      String   @db.Uuid
+  uploaderId String   @db.Uuid
+  filename   String   @db.VarChar(255)
+  filePath   String   @db.VarChar(500)
+  fileSize   BigInt
+  mimeType   String   @db.VarChar(100)
+  createdAt  DateTime @default(now())
+
+  bug      Bug  @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  uploader User @relation("BugAttachmentUploader", fields: [uploaderId], references: [id])
+
+  @@index([bugId])
 }
 
 // API Keys for external integrations

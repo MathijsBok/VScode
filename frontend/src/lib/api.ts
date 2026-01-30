@@ -446,8 +446,20 @@ export const bugApi = {
   getAll: () =>
     api.get('/bugs'),
 
-  create: (data: { title: string; description: string; type: 'TECHNICAL' | 'VISUAL' }) =>
-    api.post('/bugs', data),
+  create: (data: { title: string; description: string; type: 'TECHNICAL' | 'VISUAL'; attachments?: File[] }) => {
+    const formData = new FormData();
+    formData.append('title', data.title);
+    formData.append('description', data.description);
+    formData.append('type', data.type);
+    if (data.attachments) {
+      data.attachments.forEach(file => {
+        formData.append('attachments', file);
+      });
+    }
+    return api.post('/bugs', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
 
   solve: (id: string) =>
     api.patch(`/bugs/${id}/solve`),
@@ -456,7 +468,13 @@ export const bugApi = {
     api.patch(`/bugs/${id}/reopen`),
 
   delete: (id: string) =>
-    api.delete(`/bugs/${id}`)
+    api.delete(`/bugs/${id}`),
+
+  viewAttachment: (id: string) =>
+    `${API_URL}/bugs/attachments/${id}/view`,
+
+  downloadAttachment: (id: string) =>
+    `${API_URL}/bugs/attachments/${id}/download`
 };
 
 // Export API
