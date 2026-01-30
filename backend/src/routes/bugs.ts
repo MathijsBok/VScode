@@ -1,5 +1,4 @@
 import { Router, Response } from 'express';
-import { body, validationResult } from 'express-validator';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
