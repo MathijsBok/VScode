@@ -24,7 +24,7 @@ const AgentDashboard: React.FC = () => {
 
   // Use currentView for admins (respects "View as" switcher), userRole for others
   const effectiveRole = userRole === 'ADMIN' ? currentView : userRole;
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('OPEN');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
