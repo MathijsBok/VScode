@@ -19,9 +19,11 @@ export const useTicketNotifications = (options: UseTicketNotificationsOptions = 
     queryKey: ['agentTickets', 'NEW', 'OPEN', 'PENDING', 'ON_HOLD'],
     queryFn: async () => {
       const response = await ticketApi.getAll({
-        status: 'NEW,OPEN,PENDING,ON_HOLD'
+        status: 'NEW',
+        limit: 100
       });
-      return response.data;
+      const data = response.data;
+      return data.tickets || data; // Handle both new and old format
     },
     enabled: enabled && permission === 'granted',
     refetchInterval: enabled ? pollingInterval : false,

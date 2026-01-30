@@ -19,8 +19,8 @@ const UserDashboard: React.FC = () => {
   const { data: tickets, isLoading, error } = useQuery({
     queryKey: ['userTickets'],
     queryFn: async () => {
-      const response = await ticketApi.getAll();
-      return response.data;
+      const response = await ticketApi.getAll({ limit: 1000 }); // Users typically have fewer tickets
+      return response.data.tickets || response.data; // Handle both new and old format
     }
   });
 
