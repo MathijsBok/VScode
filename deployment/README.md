@@ -16,7 +16,8 @@ Server IP: `51.89.41.154`
 ```
 deployment/
 ├── README.md                    # This file
-├── nginx-ticket-system.conf     # Nginx reverse proxy configuration
+├── apache-ticket-dev.conf       # Apache config for development
+├── apache-ticket-prod.conf      # Apache config for production
 ├── ecosystem.config.js          # PM2 process manager configuration
 ├── server-setup.sh              # One-time server setup script
 ├── deploy-dev.sh                # Deploy to development
@@ -87,19 +88,29 @@ cd ../frontend
 npm ci && npm run build
 ```
 
-### 5. Setup Nginx
+### 5. Setup Apache
 
 ```bash
-sudo cp deployment/nginx-ticket-system.conf /etc/nginx/sites-available/ticket-system
-sudo ln -s /etc/nginx/sites-available/ticket-system /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
+# Enable required Apache modules
+sudo a2enmod proxy proxy_http proxy_wstunnel rewrite headers ssl
+
+# Copy configuration files
+sudo cp deployment/apache-ticket-dev.conf /etc/apache2/sites-available/ticket-dev.conf
+sudo cp deployment/apache-ticket-prod.conf /etc/apache2/sites-available/ticket-prod.conf
+
+# Enable sites
+sudo a2ensite ticket-dev.conf
+sudo a2ensite ticket-prod.conf
+
+# Test and reload
+sudo apache2ctl configtest
+sudo systemctl reload apache2
 ```
 
 ### 6. Get SSL Certificates
 
 ```bash
-sudo certbot --nginx -d dev.kleverchain.cloud -d support.kleverchain.cloud
+sudo certbot --apache -d dev.kleverchain.cloud -d support.kleverchain.cloud
 ```
 
 ### 7. Start PM2
@@ -153,12 +164,14 @@ pm2 restart all               # Restart all
 pm2 restart ticket-dev-backend # Restart specific
 ```
 
-### Nginx
+### Apache
 
 ```bash
-sudo nginx -t                 # Test configuration
-sudo systemctl reload nginx   # Reload config
-sudo systemctl restart nginx  # Full restart
+sudo apache2ctl configtest    # Test configuration
+sudo systemctl reload apache2 # Reload config
+sudo systemctl restart apache2 # Full restart
+sudo a2ensite ticket-dev.conf # Enable a site
+sudo a2dissite ticket-dev.conf # Disable a site
 ```
 
 ### Database
@@ -189,7 +202,8 @@ sudo certbot renew --dry-run
 ### App not loading
 1. Check PM2: `pm2 status`
 2. Check logs: `pm2 logs`
-3. Check nginx: `sudo nginx -t`
+3. Check Apache: `sudo apache2ctl configtest`
+4. Check Apache logs: `sudo tail -f /var/log/apache2/ticket-*-error.log`
 
 ### Database connection error
 1. Check PostgreSQL: `sudo systemctl status postgresql`
@@ -199,3 +213,8 @@ sudo certbot renew --dry-run
 ### SSL certificate issues
 1. Check certbot: `sudo certbot certificates`
 2. Renew manually: `sudo certbot renew`
+
+### Apache proxy errors
+1. Check modules enabled: `apache2ctl -M | grep proxy`
+2. Check backend is running: `pm2 status`
+3. Test backend directly: `curl http://localhost:3001/api/health`
