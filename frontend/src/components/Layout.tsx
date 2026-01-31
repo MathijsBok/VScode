@@ -47,8 +47,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       nav.push(
         { name: 'Tickets', href: '/agent' },
         { name: 'New Ticket', href: '/tickets/new' },
+        { name: 'Analytics', href: '/admin/analytics' },
         { name: 'Macros', href: '/admin/macros' },
-        { name: 'Email Templates', href: '/admin/email-templates' },
         { name: 'Bug Reports', href: '/admin/bugs' }
       );
     } else if (effectiveRole === 'ADMIN') {
