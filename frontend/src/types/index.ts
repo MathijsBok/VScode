@@ -18,6 +18,7 @@ export interface User {
   organizationId?: string;
   timezone?: string;
   timezoneOffset?: string;
+  country?: string;
   lastSeenAt?: string;
   isBlocked?: boolean;
   blockedAt?: string;

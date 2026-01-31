@@ -6,7 +6,7 @@ import Layout from '../components/Layout';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
-type SortField = 'email' | 'name' | 'role' | 'createdAt' | 'lastSeenAt' | 'timezone' | 'tickets';
+type SortField = 'email' | 'name' | 'role' | 'createdAt' | 'lastSeenAt' | 'timezone' | 'country' | 'tickets';
 type SortDirection = 'asc' | 'desc';
 
 // SortIcon component moved outside to prevent re-creation
@@ -116,14 +116,15 @@ const UserTable: React.FC<UserTableProps> = ({
     <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <table className="min-w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
         <colgroup>
-          <col className="w-[22%]" />
-          <col className="w-[14%]" />
-          <col className="w-[8%]" />
-          <col className="w-[8%]" />
+          <col className="w-[20%]" />
+          <col className="w-[12%]" />
+          <col className="w-[7%]" />
+          <col className="w-[6%]" />
+          <col className="w-[9%]" />
+          <col className="w-[10%]" />
+          <col className="w-[10%]" />
           <col className="w-[10%]" />
           <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[14%]" />
         </colgroup>
         <thead className="bg-gray-50 dark:bg-gray-900">
           <tr>
@@ -170,6 +171,15 @@ const UserTable: React.FC<UserTableProps> = ({
               <div className="flex items-center">
                 Timezone
                 <SortIcon field="timezone" sortField={sortField} sortDirection={sortDirection} />
+              </div>
+            </th>
+            <th
+              onClick={() => handleSort('country')}
+              className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <div className="flex items-center">
+                Country
+                <SortIcon field="country" sortField={sortField} sortDirection={sortDirection} />
               </div>
             </th>
             <th
@@ -268,6 +278,9 @@ const UserTable: React.FC<UserTableProps> = ({
               </td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {user.timezone || '-'}
+              </td>
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {user.country || '-'}
               </td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {format(new Date(user.createdAt), 'MMM d, yyyy')}
@@ -480,6 +493,10 @@ const AdminUsers: React.FC = () => {
         case 'timezone':
           aValue = (a.timezone || '').toLowerCase();
           bValue = (b.timezone || '').toLowerCase();
+          break;
+        case 'country':
+          aValue = (a.country || '').toLowerCase();
+          bValue = (b.country || '').toLowerCase();
           break;
         case 'tickets':
           aValue = a._count?.ticketsCreated || 0;
