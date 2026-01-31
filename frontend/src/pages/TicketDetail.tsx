@@ -190,9 +190,25 @@ const TicketDetail: React.FC = () => {
       .replace(/\{\{agentName\}\}/g, agentName);
   };
 
-  const handleMacroSelect = (macro: Macro) => {
+  const handleMacroSelect = async (macro: Macro) => {
     const processedContent = replaceMacroPlaceholders(macro.content);
     setReplyBody(processedContent);
+
+    // If ticket is NEW, auto-assign to agent and change status to OPEN
+    if (ticket?.status === 'NEW' && currentUser?.id) {
+      try {
+        await ticketApi.update(id!, {
+          status: 'OPEN',
+          assigneeId: currentUser.id
+        });
+        queryClient.invalidateQueries({ queryKey: ['ticket', id] });
+        queryClient.invalidateQueries({ queryKey: ['agentTickets'] });
+        queryClient.invalidateQueries({ queryKey: ['ticketStats'] });
+        toast.success('Ticket assigned to you and set to Open');
+      } catch {
+        toast.error('Failed to assign ticket');
+      }
+    }
   };
 
   const replyMutation = useMutation({
