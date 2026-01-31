@@ -51,7 +51,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     'header',
     'bold', 'italic', 'underline', 'strike',
     'color', 'background',
-    'list', 'bullet', 'indent',
+    'list', 'indent',
     'align',
     'link'
   ];
