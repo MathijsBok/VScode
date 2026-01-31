@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@clerk/clerk-react';
@@ -70,6 +70,22 @@ const TicketDetail: React.FC = () => {
   const [selectedMergeTarget, setSelectedMergeTarget] = useState<string | null>(null);
   const [mergeComment, setMergeComment] = useState('');
   const [visibleCommentsCount, setVisibleCommentsCount] = useState(5);
+  const [submitStatus, setSubmitStatus] = useState<string>('PENDING');
+  const [showSubmitDropdown, setShowSubmitDropdown] = useState(false);
+  const submitDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close submit dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (submitDropdownRef.current && !submitDropdownRef.current.contains(e.target as Node)) {
+        setShowSubmitDropdown(false);
+      }
+    };
+    if (showSubmitDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSubmitDropdown]);
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: ['ticket', id],
@@ -298,18 +314,22 @@ const TicketDetail: React.FC = () => {
       return;
     }
 
-    // If ticket is NEW and agent is replying (not internal note), auto-assign and set to OPEN
-    if (ticket?.status === 'NEW' && currentUser?.id && !isInternal) {
+    // For agents: update status and auto-assign if not already assigned
+    if ((userRole === 'AGENT' || userRole === 'ADMIN') && !isInternal) {
       try {
-        await ticketApi.update(id!, {
-          status: 'OPEN',
-          assigneeId: currentUser.id
-        });
+        const updateData: { status?: string; assigneeId?: string } = {
+          status: submitStatus
+        };
+        // Auto-assign to current agent if not already assigned
+        if (!ticket?.assigneeId && currentUser?.id) {
+          updateData.assigneeId = currentUser.id;
+        }
+        await ticketApi.update(id!, updateData);
         queryClient.invalidateQueries({ queryKey: ['ticket', id] });
         queryClient.invalidateQueries({ queryKey: ['agentTickets'] });
         queryClient.invalidateQueries({ queryKey: ['ticketStats'] });
       } catch {
-        // Continue with reply even if assignment fails
+        // Continue with reply even if status update fails
       }
     }
 
@@ -1355,13 +1375,63 @@ const TicketDetail: React.FC = () => {
                         <span className="text-sm text-gray-700 dark:text-gray-300">Internal note (not visible to customer)</span>
                       </label>
                     )}
-                    <button
-                      type="submit"
-                      disabled={replyMutation.isPending}
-                      className="ml-auto inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {replyMutation.isPending ? 'Sending...' : (isInternal ? 'Send Internal Note' : 'Send Reply')}
-                    </button>
+
+                    {/* Submit button with status dropdown for agents */}
+                    {isAgent && !isInternal ? (
+                      <div className="ml-auto relative" ref={submitDropdownRef}>
+                        <div className="flex">
+                          <button
+                            type="submit"
+                            disabled={replyMutation.isPending}
+                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-l-md shadow-sm text-sm font-medium bg-gray-800 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {replyMutation.isPending ? 'Sending...' : `Submit as ${submitStatus === 'ON_HOLD' ? 'On-hold' : submitStatus.charAt(0) + submitStatus.slice(1).toLowerCase()}`}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowSubmitDropdown(!showSubmitDropdown)}
+                            className="inline-flex items-center px-2 py-2 border-l border-gray-600 rounded-r-md bg-gray-800 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                          >
+                            <svg className={`w-4 h-4 transition-transform ${showSubmitDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        {/* Status dropdown */}
+                        {showSubmitDropdown && (
+                          <div className="absolute right-0 bottom-full mb-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
+                            {[
+                              { value: 'OPEN', label: 'Open', color: 'bg-red-500' },
+                              { value: 'PENDING', label: 'Pending', color: 'bg-blue-500' },
+                              { value: 'ON_HOLD', label: 'On-hold', color: 'bg-gray-800 dark:bg-gray-400' },
+                              { value: 'SOLVED', label: 'Solved', color: 'bg-olive-500 bg-[#6b7280]' }
+                            ].map((status) => (
+                              <button
+                                key={status.value}
+                                type="button"
+                                onClick={() => {
+                                  setSubmitStatus(status.value);
+                                  setShowSubmitDropdown(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${submitStatus === status.value ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                              >
+                                <span className={`w-3 h-3 rounded-sm ${status.color}`}></span>
+                                {status.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={replyMutation.isPending}
+                        className="ml-auto inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {replyMutation.isPending ? 'Sending...' : (isInternal ? 'Send Internal Note' : 'Send Reply')}
+                      </button>
+                    )}
                   </div>
                 </form>
               )}
