@@ -63,7 +63,7 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <NotificationProvider>
             <ViewProvider>
-              <BrowserRouter>
+              <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <SignedIn>
                   <Routes>
                     <Route path="/" element={<DashboardRouter />} />
