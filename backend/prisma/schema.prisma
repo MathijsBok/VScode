@@ -55,6 +55,7 @@ model User {
   organizationId String?   @db.Uuid
   timezone       String?   // IANA timezone (e.g., "Europe/Amsterdam")
   timezoneOffset String?   // UTC offset (e.g., "GMT+1")
+  country        String?   @db.VarChar(100) // Country from IP geolocation
   lastSeenAt     DateTime?
   isBlocked      Boolean   @default(false)
   blockedAt      DateTime?

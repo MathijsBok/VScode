@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { requireAuth, requireAgent, AuthRequest } from '../middleware/auth';
 import { generateTicketSummary, generateKnowledgeBasedSolution, getKnowledgeContent } from '../services/aiService';
 import { getOrCreateEmailThread, sendTicketCreatedEmail, sendTicketResolvedEmail } from '../services/emailService';
+import { getCountryFromIP } from '../lib/geolocation';
 
 const router = Router();
 
@@ -362,14 +363,29 @@ router.post('/',
       }
 
       // Get IP address from request
-      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
                        req.socket.remoteAddress ||
                        'unknown';
 
-      // Get country from Cloudflare header if available, otherwise use a placeholder
-      const country = (req.headers['cf-ipcountry'] as string) ||
-                     (req.headers['x-country'] as string) ||
-                     null;
+      // Get country from Cloudflare header or IP geolocation
+      const cfCountry = (req.headers['cf-ipcountry'] as string) ||
+                       (req.headers['x-country'] as string) ||
+                       null;
+      const country = await getCountryFromIP(ipAddress, cfCountry);
+
+      // Update user's country if not already set
+      if (country && requesterId) {
+        const requesterUser = await prisma.user.findUnique({
+          where: { id: requesterId },
+          select: { country: true }
+        });
+        if (requesterUser && !requesterUser.country) {
+          await prisma.user.update({
+            where: { id: requesterId },
+            data: { country }
+          });
+        }
+      }
 
       // Get user agent from request body (sent by frontend) or fallback to request header
       const clientUserAgent = userAgent || req.headers['user-agent'] || null;
