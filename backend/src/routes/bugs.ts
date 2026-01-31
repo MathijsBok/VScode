@@ -388,6 +388,19 @@ router.patch(
         }
       });
 
+      // Notify the reporter that their bug has been solved
+      if (existingBug.reportedById !== solvedById) {
+        await prisma.notification.create({
+          data: {
+            userId: existingBug.reportedById,
+            type: 'BUG_SOLVED',
+            title: 'Bug Solved',
+            message: existingBug.title,
+            bugId: id
+          }
+        });
+      }
+
       return res.json(serializeBug(bug));
     } catch (error) {
       console.error('Error solving bug:', error);

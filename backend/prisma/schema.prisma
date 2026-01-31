@@ -445,6 +445,7 @@ enum NotificationType {
   TICKET_UPDATED
   NEW_REPLY
   BUG_REPORTED
+  BUG_SOLVED
 }
 
 // Notification - alerts for users
