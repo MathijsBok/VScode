@@ -5,6 +5,7 @@ import { User, UserRole } from '../types';
 import Layout from '../components/Layout';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { getTimezoneDisplay, getCountryDisplay } from '../lib/geolocation';
 
 type SortField = 'email' | 'name' | 'role' | 'createdAt' | 'lastSeenAt' | 'timezone' | 'country' | 'tickets';
 type SortDirection = 'asc' | 'desc';
@@ -277,10 +278,10 @@ const UserTable: React.FC<UserTableProps> = ({
                 {user._count?.ticketsCreated || 0}
               </td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {user.timezoneOffset || '-'}
+                {getTimezoneDisplay(user.timezoneOffset, user.country)}
               </td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {user.country || '-'}
+                {getCountryDisplay(user.country, user.timezoneOffset)}
               </td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {format(new Date(user.createdAt), 'MMM d, yyyy')}

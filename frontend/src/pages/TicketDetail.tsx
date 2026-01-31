@@ -5,6 +5,7 @@ import { useUser } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
 import { ticketApi, commentApi, userApi, macroApi, attachmentApi, settingsApi, aiSummaryAnalyticsApi } from '../lib/api';
 import { parseUserAgent } from '../lib/deviceDetection';
+import { getTimezoneDisplay, getCountryDisplay } from '../lib/geolocation';
 import { Macro, Attachment } from '../types';
 import { useView } from '../contexts/ViewContext';
 import Layout from '../components/Layout';
@@ -855,12 +856,15 @@ const TicketDetail: React.FC = () => {
                       <div className="min-w-0 col-span-2 sm:col-span-1">
                         <span className="text-gray-500 dark:text-gray-400 block text-xs sm:text-sm">Country</span>
                         <span className="text-gray-900 dark:text-white font-medium truncate block">
-                          {ticket.country || 'Unknown'}{' '}
-                          {ticket.requester?.timezoneOffset && (
-                            <span className="text-gray-500 dark:text-gray-400">
-                              {ticket.requester.timezoneOffset.replace('GMT', 'UTC')}
-                            </span>
-                          )}
+                          {getCountryDisplay(ticket.country || ticket.requester?.country, ticket.requester?.timezoneOffset)}{' '}
+                          {(() => {
+                            const tz = getTimezoneDisplay(ticket.requester?.timezoneOffset, ticket.country || ticket.requester?.country);
+                            return tz !== '-' ? (
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {tz.replace('GMT', 'UTC')}
+                              </span>
+                            ) : null;
+                          })()}
                         </span>
                       </div>
                     </div>
