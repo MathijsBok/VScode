@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useClerk, useUser } from '@clerk/clerk-react';
 import { ticketApi, sessionApi, userApi } from '../lib/api';
 import Layout from '../components/Layout';
@@ -16,6 +16,7 @@ type SortDirection = 'asc' | 'desc';
 
 const AgentDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const clerk = useClerk();
   const { user } = useUser();
@@ -25,6 +26,10 @@ const AgentDashboard: React.FC = () => {
 
   // Use currentView for admins (respects "View as" switcher), userRole for others
   const effectiveRole = userRole === 'ADMIN' ? currentView : userRole;
+
+  // Get initial view from URL or default to 'open'
+  const urlView = searchParams.get('view') || 'open';
+
   const [statusFilter, setStatusFilter] = useState<string>('OPEN');
   const [viewBaseStatus, setViewBaseStatus] = useState<string>('OPEN'); // Track view's base status
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -32,7 +37,7 @@ const AgentDashboard: React.FC = () => {
   const [myAssigned, setMyAssigned] = useState<boolean>(false);
   const [unassigned, setUnassigned] = useState<boolean>(false);
   const [solvedAfter, setSolvedAfter] = useState<string | undefined>(undefined);
-  const [activeViewId, setActiveViewId] = useState<string>('open');
+  const [activeViewId, setActiveViewId] = useState<string>(urlView);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -53,6 +58,39 @@ const AgentDashboard: React.FC = () => {
     enabled: notificationsEnabled,
     pollingInterval: 30000 // Poll every 30 seconds
   });
+
+  // View filter definitions - used to sync state when URL changes (e.g., browser back)
+  const viewFilters: Record<string, { status?: string | string[]; allStatuses?: string[]; type?: string; assignee?: string; createdByMe?: boolean; solvedAfter?: string }> = {
+    'your-unsolved': { assignee: 'me', status: 'OPEN', allStatuses: ['OPEN', 'PENDING', 'ON_HOLD'] },
+    'unassigned': { assignee: 'unassigned' },
+    'open': { status: 'OPEN' },
+    'pending': { status: 'PENDING' },
+    'on-hold': { status: 'ON_HOLD' },
+    'problem': { type: 'PROBLEM', status: 'OPEN', allStatuses: ['OPEN', 'PENDING', 'ON_HOLD', 'SOLVED'] },
+    'incident': { type: 'INCIDENT', status: 'OPEN', allStatuses: ['OPEN', 'PENDING', 'ON_HOLD', 'SOLVED'] },
+    'all-unsolved': { status: ['OPEN', 'PENDING', 'ON_HOLD'] },
+    'solved': { status: 'SOLVED' },
+    'all': {},
+    'my-created': { createdByMe: true, status: 'OPEN', allStatuses: ['NEW', 'OPEN', 'PENDING', 'ON_HOLD', 'SOLVED', 'CLOSED'] }
+  };
+
+  // Sync view state when URL changes (e.g., browser back/forward navigation)
+  useEffect(() => {
+    if (urlView !== activeViewId) {
+      const filter = viewFilters[urlView] || viewFilters['open'];
+      setActiveViewId(urlView);
+      const initialStatus = Array.isArray(filter.status) ? filter.status.join(',') : (filter.status || '');
+      setStatusFilter(initialStatus);
+      const allStatus = filter.allStatuses ? filter.allStatuses.join(',') : initialStatus;
+      setViewBaseStatus(allStatus);
+      setTypeFilter(filter.type || '');
+      setMyRequests(filter.createdByMe === true);
+      setMyAssigned(filter.assignee === 'me');
+      setUnassigned(filter.assignee === 'unassigned');
+      setSolvedAfter(filter.solvedAfter);
+      setCurrentPage(1);
+    }
+  }, [urlView]);
 
   // Function to end the current session
   const endCurrentSession = useCallback(async (sessionId: string) => {
@@ -381,6 +419,8 @@ const AgentDashboard: React.FC = () => {
   // Handle view change from sidebar
   const handleViewChange = (viewId: string, filter: { status?: string | string[]; allStatuses?: string[]; type?: string; assignee?: string; createdByMe?: boolean; solvedAfter?: string }) => {
     setActiveViewId(viewId);
+    // Update URL with the new view (preserves history for back button)
+    setSearchParams({ view: viewId }, { replace: false });
     // Handle status filter - can be string, array, or empty
     const initialStatus = Array.isArray(filter.status) ? filter.status.join(',') : (filter.status || '');
     setStatusFilter(initialStatus);
