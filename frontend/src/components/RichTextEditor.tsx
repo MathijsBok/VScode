@@ -77,6 +77,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .dark .rich-text-editor .ql-editor {
           color: rgb(229, 231, 235);
         }
+        /* Override inline color styles in dark mode for better visibility */
+        .dark .rich-text-editor .ql-editor span[style*="color: rgb(0, 0, 0)"],
+        .dark .rich-text-editor .ql-editor span[style*="color:rgb(0, 0, 0)"],
+        .dark .rich-text-editor .ql-editor span[style*="color: rgb(0,0,0)"],
+        .dark .rich-text-editor .ql-editor span[style*="color:#000000"],
+        .dark .rich-text-editor .ql-editor span[style*="color: #000000"],
+        .dark .rich-text-editor .ql-editor span[style*="color:black"],
+        .dark .rich-text-editor .ql-editor span[style*="color: black"] {
+          color: rgb(229, 231, 235) !important;
+        }
+        /* Also handle very dark colors that are hard to read */
+        .dark .rich-text-editor .ql-editor span[style*="color: rgb(67, 67, 67)"],
+        .dark .rich-text-editor .ql-editor span[style*="color: rgb(51, 65, 85)"],
+        .dark .rich-text-editor .ql-editor span[style*="color: rgb(30, 41, 59)"] {
+          color: rgb(209, 213, 219) !important;
+        }
         .dark .rich-text-editor .ql-editor.ql-blank::before {
           color: rgb(107, 114, 128);
         }

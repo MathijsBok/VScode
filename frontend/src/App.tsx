@@ -87,6 +87,126 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route
+                      path="/agent/analytics"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AnalyticsDashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/forms"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminForms />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/forms/new"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminForms />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/forms/:id"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminForms />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/fields"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminFieldLibrary />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/fields/new"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminFieldLibrary />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/fields/:id"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminFieldLibrary />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/macros"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminMacros />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/macros/new"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminMacros />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/macros/:id"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminMacros />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/email-templates"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminEmailTemplates />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/email-templates/:id"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminEmailTemplates />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/users"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminUsers />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/bugs"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminBugs />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent/bugs/:id"
+                      element={
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
+                          <AdminBugs />
+                        </ProtectedRoute>
+                      }
+                    />
 
                     {/* Admin Routes */}
                     <Route
@@ -108,7 +228,7 @@ function App() {
                     <Route
                       path="/admin/forms"
                       element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
                           <AdminForms />
                         </ProtectedRoute>
                       }
@@ -116,7 +236,7 @@ function App() {
                     <Route
                       path="/admin/forms/new"
                       element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
                           <AdminForms />
                         </ProtectedRoute>
                       }
@@ -124,7 +244,7 @@ function App() {
                     <Route
                       path="/admin/forms/:id"
                       element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
                           <AdminForms />
                         </ProtectedRoute>
                       }
@@ -132,7 +252,7 @@ function App() {
                     <Route
                       path="/admin/fields"
                       element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
                           <AdminFieldLibrary />
                         </ProtectedRoute>
                       }
@@ -140,7 +260,7 @@ function App() {
                     <Route
                       path="/admin/fields/new"
                       element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
                           <AdminFieldLibrary />
                         </ProtectedRoute>
                       }
@@ -148,7 +268,7 @@ function App() {
                     <Route
                       path="/admin/fields/:id"
                       element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <ProtectedRoute allowedRoles={['AGENT', 'ADMIN']}>
                           <AdminFieldLibrary />
                         </ProtectedRoute>
                       }

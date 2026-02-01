@@ -80,19 +80,22 @@ const AdminEmailTemplates: React.FC = () => {
 
   // Populate form when editing (URL changes to /admin/email-templates/:id)
   useEffect(() => {
-    if (editingTemplate) {
-      setFormData({
-        subject: editingTemplate.subject,
-        bodyHtml: editingTemplate.bodyHtml,
-        bodyPlain: editingTemplate.bodyPlain
-      });
-      setPreviewData(null);
+    if (urlTemplateId && templates) {
+      const template = templates.find(t => t.id === urlTemplateId);
+      if (template) {
+        setFormData({
+          subject: template.subject,
+          bodyHtml: template.bodyHtml,
+          bodyPlain: template.bodyPlain
+        });
+        setPreviewData(null);
+      }
     } else if (!urlTemplateId) {
       // Reset form when back on list view
       setFormData({ subject: '', bodyHtml: '', bodyPlain: '' });
       setPreviewData(null);
     }
-  }, [editingTemplate, urlTemplateId]);
+  }, [urlTemplateId, templates]);
 
   const handleSave = () => {
     if (!editingTemplate) return;

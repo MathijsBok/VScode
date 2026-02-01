@@ -59,30 +59,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       // Agent view: show agent-facing navigation based on permissions
       nav.push({ name: 'Tickets', href: '/agent' });
 
-      // Conditionally add menu items based on permissions
+      // Conditionally add menu items based on permissions (using /agent/ URLs for agents)
       if (agentPermissions?.canCreateTickets !== false) {
         nav.push({ name: 'New Ticket', href: '/tickets/new' });
       }
       if (agentPermissions?.canAccessAnalytics !== false) {
-        nav.push({ name: 'Analytics', href: '/admin/analytics' });
+        nav.push({ name: 'Analytics', href: '/agent/analytics' });
       }
       if (agentPermissions?.canAccessForms !== false) {
-        nav.push({ name: 'Forms', href: '/admin/forms' });
+        nav.push({ name: 'Forms', href: '/agent/forms' });
       }
       if (agentPermissions?.canAccessFieldLibrary !== false) {
-        nav.push({ name: 'Field Library', href: '/admin/fields' });
+        nav.push({ name: 'Field Library', href: '/agent/fields' });
       }
       if (agentPermissions?.canAccessMacros !== false) {
-        nav.push({ name: 'Macros', href: '/admin/macros' });
+        nav.push({ name: 'Macros', href: '/agent/macros' });
       }
       if (agentPermissions?.canAccessEmailTemplates === true) {
-        nav.push({ name: 'Email Templates', href: '/admin/email-templates' });
+        nav.push({ name: 'Email Templates', href: '/agent/email-templates' });
       }
       if (agentPermissions?.canAccessUsers === true) {
-        nav.push({ name: 'Users', href: '/admin/users' });
+        nav.push({ name: 'Users', href: '/agent/users' });
       }
       if (agentPermissions?.canAccessBugReports !== false) {
-        nav.push({ name: 'Bug Reports', href: '/admin/bugs' });
+        nav.push({ name: 'Bug Reports', href: '/agent/bugs' });
       }
     } else if (effectiveRole === 'ADMIN') {
       // Admin view: show all admin navigation in the main nav array
