@@ -339,6 +339,9 @@ export const settingsApi = {
   getAIStatus: () =>
     api.get('/settings/ai-status'),
 
+  getAgentPermissions: () =>
+    api.get('/settings/agent-permissions'),
+
   refreshKnowledgeCache: () =>
     api.post('/settings/refresh-knowledge-cache')
 };

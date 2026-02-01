@@ -39,6 +39,27 @@ router.get('/ai-status', requireAuth, requireAgent, async (_req, res) => {
   }
 });
 
+// Get agent page permissions (for agents to know which pages they can access)
+// NOTE: When adding new admin pages, add them here with default false
+router.get('/agent-permissions', requireAuth, async (_req, res) => {
+  try {
+    const settings = await prisma.settings.findFirst();
+    return res.json({
+      canAccessAnalytics: settings?.agentCanAccessAnalytics ?? true,
+      canAccessForms: settings?.agentCanAccessForms ?? true,
+      canAccessFieldLibrary: settings?.agentCanAccessFieldLibrary ?? true,
+      canAccessMacros: settings?.agentCanAccessMacros ?? true,
+      canAccessBugReports: settings?.agentCanAccessBugReports ?? true,
+      canAccessEmailTemplates: settings?.agentCanAccessEmailTemplates ?? false,
+      canAccessUsers: settings?.agentCanAccessUsers ?? false,
+      canCreateTickets: settings?.agentCanCreateTickets ?? true
+    });
+  } catch (error) {
+    console.error('Error fetching agent permissions:', error);
+    return res.status(500).json({ error: 'Failed to fetch agent permissions' });
+  }
+});
+
 // Update settings
 router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useUser, UserButton } from '@clerk/clerk-react';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../contexts/ThemeContext';
 import { useView } from '../contexts/ViewContext';
 import { Link, useLocation } from 'react-router-dom';
+import { settingsApi } from '../lib/api';
 import NotificationBell from './NotificationBell';
 import ChatWidget from './ChatWidget';
 
@@ -18,6 +20,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Default to 'USER' role if no role is set (new users)
   const userRole = (user?.publicMetadata?.role as string) || 'USER';
+
+  // Fetch agent permissions (only for agents, not admins)
+  const { data: agentPermissions } = useQuery({
+    queryKey: ['agentPermissions'],
+    queryFn: async () => {
+      const response = await settingsApi.getAgentPermissions();
+      return response.data;
+    },
+    enabled: userRole === 'AGENT' || userRole === 'ADMIN',
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
+  });
 
   // Only update currentView when admin uses "View as" dropdown
   // Don't auto-switch based on URL - this was causing navigation issues
@@ -43,16 +56,34 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { name: 'New Ticket', href: '/tickets/new' }
       );
     } else if (effectiveRole === 'AGENT') {
-      // Agent view: show agent-facing navigation
-      nav.push(
-        { name: 'Tickets', href: '/agent' },
-        { name: 'New Ticket', href: '/tickets/new' },
-        { name: 'Analytics', href: '/admin/analytics' },
-        { name: 'Forms', href: '/admin/forms' },
-        { name: 'Field Library', href: '/admin/fields' },
-        { name: 'Macros', href: '/admin/macros' },
-        { name: 'Bug Reports', href: '/admin/bugs' }
-      );
+      // Agent view: show agent-facing navigation based on permissions
+      nav.push({ name: 'Tickets', href: '/agent' });
+
+      // Conditionally add menu items based on permissions
+      if (agentPermissions?.canCreateTickets !== false) {
+        nav.push({ name: 'New Ticket', href: '/tickets/new' });
+      }
+      if (agentPermissions?.canAccessAnalytics !== false) {
+        nav.push({ name: 'Analytics', href: '/admin/analytics' });
+      }
+      if (agentPermissions?.canAccessForms !== false) {
+        nav.push({ name: 'Forms', href: '/admin/forms' });
+      }
+      if (agentPermissions?.canAccessFieldLibrary !== false) {
+        nav.push({ name: 'Field Library', href: '/admin/fields' });
+      }
+      if (agentPermissions?.canAccessMacros !== false) {
+        nav.push({ name: 'Macros', href: '/admin/macros' });
+      }
+      if (agentPermissions?.canAccessEmailTemplates === true) {
+        nav.push({ name: 'Email Templates', href: '/admin/email-templates' });
+      }
+      if (agentPermissions?.canAccessUsers === true) {
+        nav.push({ name: 'Users', href: '/admin/users' });
+      }
+      if (agentPermissions?.canAccessBugReports !== false) {
+        nav.push({ name: 'Bug Reports', href: '/admin/bugs' });
+      }
     } else if (effectiveRole === 'ADMIN') {
       // Admin view: show all admin navigation in the main nav array
       nav.push(
@@ -70,7 +101,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
 
     return nav;
-  }, [effectiveRole]);
+  }, [effectiveRole, agentPermissions]);
 
   const handleNavClick = () => {
     setMobileMenuOpen(false);

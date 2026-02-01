@@ -381,6 +381,18 @@ model Settings {
   sendgridFromName            String?  @db.VarChar(100)
   sendgridInboundDomain       String?  @db.VarChar(255) // Domain for reply-to addresses (e.g., reply.yourdomain.com)
 
+  // Agent Page Permissions (which pages agents can access)
+  // NOTE: When adding new admin pages, add a permission here with @default(false)
+  // so new pages are disabled for agents by default until admin enables them
+  agentCanAccessAnalytics       Boolean  @default(true)
+  agentCanAccessForms           Boolean  @default(true)
+  agentCanAccessFieldLibrary    Boolean  @default(true)
+  agentCanAccessMacros          Boolean  @default(true)
+  agentCanAccessBugReports      Boolean  @default(true)
+  agentCanAccessEmailTemplates  Boolean  @default(false)  // New pages default to false
+  agentCanAccessUsers           Boolean  @default(false)  // New pages default to false
+  agentCanCreateTickets         Boolean  @default(true)
+
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
 }

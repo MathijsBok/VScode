@@ -5,8 +5,8 @@ import toast from 'react-hot-toast';
 import { settingsApi, zendeskApi, exportApi, apiKeyApi, analyticsApi, adminAnalyticsApi, aiAnalyticsApi, macroApi, databaseApi } from '../lib/api';
 import Layout from '../components/Layout';
 
-type TabType = 'notifications' | 'automation' | 'sendgrid' | 'import' | 'export' | 'api' | 'maintenance' | 'widget';
-const validTabs: TabType[] = ['notifications', 'automation', 'sendgrid', 'import', 'export', 'api', 'maintenance', 'widget'];
+type TabType = 'notifications' | 'automation' | 'sendgrid' | 'import' | 'export' | 'api' | 'maintenance' | 'widget' | 'permissions';
+const validTabs: TabType[] = ['notifications', 'automation', 'sendgrid', 'import', 'export', 'api', 'maintenance', 'widget', 'permissions'];
 
 interface ApiKey {
   id: string;
@@ -1100,6 +1100,11 @@ const AdminSettings: React.FC = () => {
     { id: 'widget' as TabType, label: 'Widget', icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+    )},
+    { id: 'permissions' as TabType, label: 'Permissions', icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
       </svg>
     )}
   ];
@@ -3707,6 +3712,202 @@ const AdminSettings: React.FC = () => {
                         'Save Changes'
                       )}
                     </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Permissions Tab */}
+          {activeTab === 'permissions' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  Agent Permissions
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  Control which pages and features agents can access
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Create Tickets Permission */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                      Create Tickets
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Allow agents to create new tickets on behalf of users
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings?.agentCanCreateTickets ?? true}
+                      onChange={(e) => handleToggle('agentCanCreateTickets', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Analytics Permission */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                      Analytics
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Allow agents to view analytics and reports
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings?.agentCanAccessAnalytics ?? true}
+                      onChange={(e) => handleToggle('agentCanAccessAnalytics', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Forms Permission */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                      Forms
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Allow agents to view and manage ticket forms
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings?.agentCanAccessForms ?? true}
+                      onChange={(e) => handleToggle('agentCanAccessForms', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Field Library Permission */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                      Field Library
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Allow agents to view and manage custom form fields
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings?.agentCanAccessFieldLibrary ?? true}
+                      onChange={(e) => handleToggle('agentCanAccessFieldLibrary', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Macros Permission */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                      Macros
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Allow agents to view and manage response macros
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings?.agentCanAccessMacros ?? true}
+                      onChange={(e) => handleToggle('agentCanAccessMacros', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Bug Reports Permission */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                      Bug Reports
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Allow agents to view and manage bug reports
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings?.agentCanAccessBugReports ?? true}
+                      onChange={(e) => handleToggle('agentCanAccessBugReports', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Email Templates Permission */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                      Email Templates
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Allow agents to view and manage email templates
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings?.agentCanAccessEmailTemplates ?? false}
+                      onChange={(e) => handleToggle('agentCanAccessEmailTemplates', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Users Permission */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                      Users
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Allow agents to view and manage users
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings?.agentCanAccessUsers ?? false}
+                      onChange={(e) => handleToggle('agentCanAccessUsers', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex gap-3">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="text-sm text-blue-700 dark:text-blue-300">
+                    <p className="font-medium">Note</p>
+                    <p className="mt-1">These settings control which menu items are visible to agents. Agents always have access to the Tickets page. Admins always have access to all pages regardless of these settings. New pages are disabled by default until enabled here.</p>
                   </div>
                 </div>
               </div>
