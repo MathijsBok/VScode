@@ -82,6 +82,36 @@ const TicketDetail: React.FC = () => {
   const [showProblemSearch, setShowProblemSearch] = useState(false);
   const [problemSearchQuery, setProblemSearchQuery] = useState('');
   const [showScamModal, setShowScamModal] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const typeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close status dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setShowStatusDropdown(false);
+      }
+    };
+    if (showStatusDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showStatusDropdown]);
+
+  // Close type dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) {
+        setShowTypeDropdown(false);
+      }
+    };
+    if (showTypeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTypeDropdown]);
 
   // Close submit dropdown when clicking outside
   useEffect(() => {
@@ -739,19 +769,54 @@ const TicketDetail: React.FC = () => {
                       </>
                     )}
                   </div>
-                  <select
-                    value={ticket.status}
-                    onChange={handleStatusChange}
-                    disabled={updateStatusMutation.isPending}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="NEW">New</option>
-                    <option value="OPEN">Open</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="ON_HOLD">On Hold</option>
-                    <option value="SOLVED">Solved</option>
-                    <option value="CLOSED">Closed</option>
-                  </select>
+                  {/* Status dropdown */}
+                  <div className="relative" ref={statusDropdownRef}>
+                    <button
+                      onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                      disabled={updateStatusMutation.isPending}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary flex items-center gap-2 min-w-[120px] justify-between disabled:opacity-50"
+                    >
+                      <span>
+                        {ticket.status === 'NEW' && 'New'}
+                        {ticket.status === 'OPEN' && 'Open'}
+                        {ticket.status === 'PENDING' && 'Pending'}
+                        {ticket.status === 'ON_HOLD' && 'On Hold'}
+                        {ticket.status === 'SOLVED' && 'Solved'}
+                        {ticket.status === 'CLOSED' && 'Closed'}
+                      </span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {showStatusDropdown && (
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-20">
+                        {[
+                          { value: 'NEW', label: 'New' },
+                          { value: 'OPEN', label: 'Open' },
+                          { value: 'PENDING', label: 'Pending' },
+                          { value: 'ON_HOLD', label: 'On Hold' },
+                          { value: 'SOLVED', label: 'Solved' },
+                          { value: 'CLOSED', label: 'Closed' },
+                        ].map((status, index, arr) => (
+                          <button
+                            key={status.value}
+                            onClick={() => {
+                              handleStatusChange({ target: { value: status.value } } as React.ChangeEvent<HTMLSelectElement>);
+                              setShowStatusDropdown(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${index === 0 ? 'rounded-t-md' : ''} ${index === arr.length - 1 ? 'rounded-b-md' : ''}`}
+                          >
+                            <span>{status.label}</span>
+                            {ticket.status === status.value && (
+                              <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {/* Merge button - only show for open tickets */}
                   {ticket.status !== 'SOLVED' && ticket.status !== 'CLOSED' && !ticket.mergedIntoId && (
                     <button
@@ -1340,16 +1405,47 @@ const TicketDetail: React.FC = () => {
                 {/* Type selector */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
-                  <select
-                    value={ticket.type || 'NORMAL'}
-                    onChange={(e) => updateTypeMutation.mutate(e.target.value)}
-                    disabled={updateTypeMutation.isPending}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                  >
-                    <option value="NORMAL">Normal</option>
-                    <option value="PROBLEM">Problem</option>
-                    <option value="INCIDENT">Incident</option>
-                  </select>
+                  <div className="relative" ref={typeDropdownRef}>
+                    <button
+                      onClick={() => setShowTypeDropdown(!showTypeDropdown)}
+                      disabled={updateTypeMutation.isPending}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary flex items-center justify-between disabled:opacity-50"
+                    >
+                      <span>
+                        {(ticket.type || 'NORMAL') === 'NORMAL' && 'Normal'}
+                        {ticket.type === 'PROBLEM' && 'Problem'}
+                        {ticket.type === 'INCIDENT' && 'Incident'}
+                      </span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {showTypeDropdown && (
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-20">
+                        {[
+                          { value: 'NORMAL', label: 'Normal' },
+                          { value: 'PROBLEM', label: 'Problem' },
+                          { value: 'INCIDENT', label: 'Incident' },
+                        ].map((type, index, arr) => (
+                          <button
+                            key={type.value}
+                            onClick={() => {
+                              updateTypeMutation.mutate(type.value);
+                              setShowTypeDropdown(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${index === 0 ? 'rounded-t-md' : ''} ${index === arr.length - 1 ? 'rounded-b-md' : ''}`}
+                          >
+                            <span>{type.label}</span>
+                            {(ticket.type || 'NORMAL') === type.value && (
+                              <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* For INCIDENT tickets: show linked problem or link button */}
