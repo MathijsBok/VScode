@@ -43,8 +43,8 @@ router.get('/', requireAuth, requireAgent, async (req: AuthRequest, res: Respons
   }
 });
 
-// Reorder macros (admin only) - MUST be before /:id routes
-router.patch('/reorder', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+// Reorder macros (agents and admins) - MUST be before /:id routes
+router.patch('/reorder', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
   try {
     const { macroIds } = req.body;
 
@@ -69,8 +69,8 @@ router.patch('/reorder', requireAuth, requireAdmin, async (req: AuthRequest, res
   }
 });
 
-// Import macros from Zendesk JSON (admin only)
-router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (req: AuthRequest, res: Response) => {
+// Import macros from Zendesk JSON (agents and admins)
+router.post('/import', requireAuth, requireAgent, upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -215,10 +215,10 @@ router.get('/:id', requireAuth, requireAgent, async (req: AuthRequest, res: Resp
   }
 });
 
-// Create new macro (admin only)
+// Create new macro (agents and admins)
 router.post('/',
   requireAuth,
-  requireAdmin,
+  requireAgent,
   [
     body('name').isString().notEmpty().withMessage('Name is required'),
     body('content').isString().notEmpty().withMessage('Content is required'),
@@ -256,10 +256,10 @@ router.post('/',
   }
 );
 
-// Update macro (admin only)
+// Update macro (agents and admins)
 router.patch('/:id',
   requireAuth,
-  requireAdmin,
+  requireAgent,
   [
     body('name').optional().isString().notEmpty(),
     body('content').optional().isString().notEmpty(),
@@ -304,8 +304,8 @@ router.patch('/:id',
   }
 );
 
-// Delete macro (admin only)
-router.delete('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+// Delete macro (agents and admins)
+router.delete('/:id', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
