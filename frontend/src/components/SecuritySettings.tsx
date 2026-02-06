@@ -18,6 +18,22 @@ export default function SecuritySettings() {
   const [securityStatus, setSecurityStatus] = useState<SecurityStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+
+    checkDarkMode();
+
+    // Watch for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
 
   const fetchSecurityStatus = async () => {
     try {
@@ -198,62 +214,66 @@ export default function SecuritySettings() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <UserProfile
           appearance={{
+            variables: isDarkMode ? {
+              colorBackground: '#1f2937', // gray-800
+              colorText: '#f3f4f6', // gray-100
+              colorPrimary: '#3b82f6', // blue-500
+              colorInputBackground: '#374151', // gray-700
+              colorInputText: '#f3f4f6', // gray-100
+              colorTextSecondary: '#9ca3af', // gray-400
+              colorDanger: '#ef4444', // red-500
+            } : undefined,
             elements: {
-              rootBox: 'w-full [&_*]:!transition-colors',
-              card: '!bg-white dark:!bg-gray-800 !shadow-none !border-0',
-              navbar: '!bg-white dark:!bg-gray-700 !border-gray-200 dark:!border-gray-600',
-              navbarButton: '!text-gray-700 dark:!text-gray-300 hover:!bg-gray-100 dark:hover:!bg-gray-600',
-              navbarButtonActive: '!text-blue-600 dark:!text-blue-400 !bg-blue-50 dark:!bg-gray-600',
-              navbarMobileMenuButton: '!text-gray-700 dark:!text-gray-300',
-              pageScrollBox: '!bg-white dark:!bg-gray-800',
-              page: '!bg-white dark:!bg-gray-800',
-              header: '!bg-white dark:!bg-gray-700',
-              headerTitle: '!text-gray-900 dark:!text-white',
-              headerSubtitle: '!text-gray-600 dark:!text-gray-400',
-              profileSection: '!bg-white dark:!bg-gray-800 !border-gray-200 dark:!border-gray-700',
-              profileSectionTitle: '!text-gray-900 dark:!text-white',
-              profileSectionContent: '!text-gray-700 dark:!text-gray-300',
-              profileSectionPrimaryButton: '!text-blue-600 dark:!text-blue-400 hover:!bg-blue-50 dark:hover:!bg-gray-700',
-              formFieldLabel: '!text-gray-700 dark:!text-gray-300',
-              formFieldInput: '!bg-white dark:!bg-gray-700 !text-gray-900 dark:!text-white !border-gray-300 dark:!border-gray-600',
-              formFieldInputShowPasswordButton: '!text-gray-500 dark:!text-gray-400',
+              rootBox: 'w-full',
+              card: isDarkMode ? '!bg-gray-800 !text-white !shadow-none !border-0' : '!bg-white !shadow-none !border-0',
+              navbar: isDarkMode ? '!bg-gray-700 !border-gray-600' : '!bg-white !border-gray-200',
+              navbarButton: isDarkMode ? '!text-gray-300 hover:!bg-gray-600' : '!text-gray-700 hover:!bg-gray-100',
+              navbarButtonActive: isDarkMode ? '!text-blue-400 !bg-gray-600' : '!text-blue-600 !bg-blue-50',
+              navbarMobileMenuButton: isDarkMode ? '!text-gray-300' : '!text-gray-700',
+              pageScrollBox: isDarkMode ? '!bg-gray-800' : '!bg-white',
+              page: isDarkMode ? '!bg-gray-800' : '!bg-white',
+              header: isDarkMode ? '!bg-gray-700' : '!bg-white',
+              headerTitle: isDarkMode ? '!text-white' : '!text-gray-900',
+              headerSubtitle: isDarkMode ? '!text-gray-400' : '!text-gray-600',
+              profileSection: isDarkMode ? '!bg-gray-800 !border-gray-700' : '!bg-white !border-gray-200',
+              profileSectionTitle: isDarkMode ? '!text-white' : '!text-gray-900',
+              profileSectionContent: isDarkMode ? '!text-gray-300' : '!text-gray-700',
+              profileSectionPrimaryButton: isDarkMode ? '!text-blue-400 hover:!bg-gray-700' : '!text-blue-600 hover:!bg-blue-50',
+              formFieldLabel: isDarkMode ? '!text-gray-300' : '!text-gray-700',
+              formFieldInput: isDarkMode ? '!bg-gray-700 !text-white !border-gray-600' : '!bg-white !text-gray-900 !border-gray-300',
+              formFieldInputShowPasswordButton: isDarkMode ? '!text-gray-400' : '!text-gray-500',
               formButtonPrimary: '!bg-blue-600 hover:!bg-blue-700 !text-white !border-0',
-              formButtonReset: '!text-gray-700 dark:!text-gray-300 hover:!bg-gray-100 dark:hover:!bg-gray-700',
-              badge: '!bg-gray-100 dark:!bg-gray-700 !text-gray-700 dark:!text-gray-300',
-              badgePrimary: '!bg-blue-100 dark:!bg-blue-900 !text-blue-700 dark:!text-blue-300',
-              accordionTriggerButton: '!text-gray-700 dark:!text-gray-300 hover:!bg-gray-100 dark:hover:!bg-gray-700',
-              accordionContent: '!text-gray-700 dark:!text-gray-300',
-              dividerLine: '!bg-gray-200 dark:!bg-gray-700',
-              dividerText: '!text-gray-500 dark:!text-gray-400',
-              modalCloseButton: '!text-gray-500 dark:!text-gray-400 hover:!bg-gray-100 dark:hover:!bg-gray-700',
-              identityPreview: '!bg-gray-50 dark:!bg-gray-700 !border-gray-200 dark:!border-gray-600',
-              identityPreviewText: '!text-gray-900 dark:!text-white',
-              identityPreviewEditButton: '!text-blue-600 dark:!text-blue-400',
-              footer: '!bg-white dark:!bg-gray-700',
-              footerActionText: '!text-gray-600 dark:!text-gray-400',
-              footerActionLink: '!text-blue-600 dark:!text-blue-400',
-              // Additional text and container elements
-              userPreviewMainIdentifier: '!text-gray-900 dark:!text-white !bg-transparent dark:!bg-transparent',
-              userPreviewSecondaryIdentifier: '!text-gray-600 dark:!text-gray-400 !bg-transparent dark:!bg-transparent',
-              userButtonPopoverCard: '!bg-white dark:!bg-gray-800',
-              userButtonPopoverActionButton: '!text-gray-700 dark:!text-gray-300',
-              avatarBox: '!border-gray-300 dark:!border-gray-600',
-              avatarImage: '!border-gray-300 dark:!border-gray-600',
-              // Form and input elements
-              formFieldAction: '!text-blue-600 dark:!text-blue-400',
-              formFieldSuccessText: '!text-green-600 dark:!text-green-400',
-              formFieldErrorText: '!text-red-600 dark:!text-red-400',
-              formFieldHintText: '!text-gray-500 dark:!text-gray-400',
-              formFieldWarningText: '!text-yellow-600 dark:!text-yellow-400',
-              // Profile section items
-              profileSectionItem: '!bg-transparent dark:!bg-transparent !text-gray-900 dark:!text-white',
-              profileSectionItemButton: '!text-gray-700 dark:!text-gray-300',
-              // Text elements
-              text: '!text-gray-900 dark:!text-white',
-              textSecondary: '!text-gray-600 dark:!text-gray-400',
-              // Tags and badges
-              tag: '!bg-gray-100 dark:!bg-gray-700 !text-gray-700 dark:!text-gray-300',
-              tagPrimaryText: '!text-blue-700 dark:!text-blue-300'
+              formButtonReset: isDarkMode ? '!text-gray-300 hover:!bg-gray-700' : '!text-gray-700 hover:!bg-gray-100',
+              badge: isDarkMode ? '!bg-gray-700 !text-gray-300' : '!bg-gray-100 !text-gray-700',
+              badgePrimary: isDarkMode ? '!bg-blue-900 !text-blue-300' : '!bg-blue-100 !text-blue-700',
+              accordionTriggerButton: isDarkMode ? '!text-gray-300 hover:!bg-gray-700' : '!text-gray-700 hover:!bg-gray-100',
+              accordionContent: isDarkMode ? '!text-gray-300' : '!text-gray-700',
+              dividerLine: isDarkMode ? '!bg-gray-700' : '!bg-gray-200',
+              dividerText: isDarkMode ? '!text-gray-400' : '!text-gray-500',
+              modalCloseButton: isDarkMode ? '!text-gray-400 hover:!bg-gray-700' : '!text-gray-500 hover:!bg-gray-100',
+              identityPreview: isDarkMode ? '!bg-gray-700 !border-gray-600' : '!bg-gray-50 !border-gray-200',
+              identityPreviewText: isDarkMode ? '!text-white' : '!text-gray-900',
+              identityPreviewEditButton: isDarkMode ? '!text-blue-400' : '!text-blue-600',
+              footer: isDarkMode ? '!bg-gray-700' : '!bg-white',
+              footerActionText: isDarkMode ? '!text-gray-400' : '!text-gray-600',
+              footerActionLink: isDarkMode ? '!text-blue-400' : '!text-blue-600',
+              userPreviewMainIdentifier: isDarkMode ? '!text-white !bg-transparent' : '!text-gray-900 !bg-transparent',
+              userPreviewSecondaryIdentifier: isDarkMode ? '!text-gray-400 !bg-transparent' : '!text-gray-600 !bg-transparent',
+              userButtonPopoverCard: isDarkMode ? '!bg-gray-800' : '!bg-white',
+              userButtonPopoverActionButton: isDarkMode ? '!text-gray-300' : '!text-gray-700',
+              avatarBox: isDarkMode ? '!border-gray-600' : '!border-gray-300',
+              avatarImage: isDarkMode ? '!border-gray-600' : '!border-gray-300',
+              formFieldAction: isDarkMode ? '!text-blue-400' : '!text-blue-600',
+              formFieldSuccessText: isDarkMode ? '!text-green-400' : '!text-green-600',
+              formFieldErrorText: isDarkMode ? '!text-red-400' : '!text-red-600',
+              formFieldHintText: isDarkMode ? '!text-gray-400' : '!text-gray-500',
+              formFieldWarningText: isDarkMode ? '!text-yellow-400' : '!text-yellow-600',
+              profileSectionItem: isDarkMode ? '!bg-transparent !text-white' : '!bg-transparent !text-gray-900',
+              profileSectionItemButton: isDarkMode ? '!text-gray-300' : '!text-gray-700',
+              text: isDarkMode ? '!text-white' : '!text-gray-900',
+              textSecondary: isDarkMode ? '!text-gray-400' : '!text-gray-600',
+              tag: isDarkMode ? '!bg-gray-700 !text-gray-300' : '!bg-gray-100 !text-gray-700',
+              tagPrimaryText: isDarkMode ? '!text-blue-300' : '!text-blue-700'
             }
           }}
           routing="hash"
