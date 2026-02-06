@@ -42,13 +42,26 @@ router.post('/clerk', async (req: Request, res: Response) => {
       case 'user.updated': {
         // Update user in database
         const updatedRole = event.data.public_metadata?.role || 'USER';
+        const has2FA = event.data.two_factor_enabled || false;
+
+        // Get existing user to check if this is first 2FA enrollment
+        const existingUser = await prisma.user.findUnique({
+          where: { clerkId: event.data.id },
+          select: { has2FAEnabled: true, has2FAEnrolledAt: true }
+        });
+
         await prisma.user.update({
           where: { clerkId: event.data.id },
           data: {
             email: event.data.email_addresses[0]?.email_address,
             firstName: event.data.first_name,
             lastName: event.data.last_name,
-            role: updatedRole.toUpperCase()
+            role: updatedRole.toUpperCase(),
+            has2FAEnabled: has2FA,
+            has2FAEnrolledAt: has2FA && (!existingUser || !existingUser.has2FAEnabled)
+              ? new Date()
+              : existingUser?.has2FAEnrolledAt,
+            twoFactorLastSyncedAt: new Date()
           }
         });
         break;

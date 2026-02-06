@@ -1,13 +1,13 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { requireAuth, requireAdmin, requireAgent } from '../middleware/auth';
+import { requireAuth, requireAdmin, requireAgent, AuthRequest } from '../middleware/auth';
 import { refreshKnowledgeCache } from '../services/aiService';
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // Get settings (create default if doesn't exist)
-router.get('/', requireAuth, requireAdmin, async (_req, res) => {
+router.get('/', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
   try {
     let settings = await prisma.settings.findFirst();
 
@@ -26,7 +26,7 @@ router.get('/', requireAuth, requireAdmin, async (_req, res) => {
 });
 
 // Get AI settings status (for agents)
-router.get('/ai-status', requireAuth, requireAgent, async (_req, res) => {
+router.get('/ai-status', requireAuth, requireAgent, async (_req: AuthRequest, res: Response) => {
   try {
     const settings = await prisma.settings.findFirst();
     return res.json({
@@ -41,7 +41,7 @@ router.get('/ai-status', requireAuth, requireAgent, async (_req, res) => {
 
 // Get agent page permissions (for agents to know which pages they can access)
 // NOTE: When adding new admin pages, add them here with default false
-router.get('/agent-permissions', requireAuth, async (_req, res) => {
+router.get('/agent-permissions', requireAuth, async (_req: AuthRequest, res: Response) => {
   try {
     const settings = await prisma.settings.findFirst();
     return res.json({
@@ -61,7 +61,7 @@ router.get('/agent-permissions', requireAuth, async (_req, res) => {
 });
 
 // Update settings
-router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -79,6 +79,49 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Auto-solve hours must be at least 1' });
     }
 
+    // Validate 2FA settings
+    if (updateData.twoFactorGracePeriodDays !== undefined) {
+      if (updateData.twoFactorGracePeriodDays < 1 || updateData.twoFactorGracePeriodDays > 90) {
+        return res.status(400).json({ error: 'Grace period days must be between 1 and 90' });
+      }
+    }
+
+    // If enforcement is being enabled, set grace periods for users without 2FA
+    if (updateData.twoFactorEnforcementEnabled === true) {
+      const currentSettings = await prisma.settings.findUnique({ where: { id } });
+
+      if (currentSettings && !currentSettings.twoFactorEnforcementEnabled) {
+        // Enforcement is being turned on for the first time
+        const gracePeriodDays = updateData.twoFactorGracePeriodDays || currentSettings.twoFactorGracePeriodDays || 7;
+        const gracePeriodEnd = new Date();
+        gracePeriodEnd.setDate(gracePeriodEnd.getDate() + gracePeriodDays);
+
+        // Set grace period for admins without 2FA (if required)
+        if (currentSettings.require2FAForAdmins || updateData.require2FAForAdmins) {
+          await prisma.user.updateMany({
+            where: {
+              role: 'ADMIN',
+              has2FAEnabled: false,
+              twoFactorGracePeriodEnd: null
+            },
+            data: { twoFactorGracePeriodEnd: gracePeriodEnd }
+          });
+        }
+
+        // Set grace period for agents without 2FA (if required)
+        if (currentSettings.require2FAForAgents || updateData.require2FAForAgents) {
+          await prisma.user.updateMany({
+            where: {
+              role: 'AGENT',
+              has2FAEnabled: false,
+              twoFactorGracePeriodEnd: null
+            },
+            data: { twoFactorGracePeriodEnd: gracePeriodEnd }
+          });
+        }
+      }
+    }
+
     const settings = await prisma.settings.update({
       where: { id },
       data: updateData
@@ -92,7 +135,7 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // Refresh AI knowledge cache
-router.post('/refresh-knowledge-cache', requireAuth, requireAdmin, async (_req, res) => {
+router.post('/refresh-knowledge-cache', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
   try {
     const settings = await prisma.settings.findFirst();
 

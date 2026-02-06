@@ -5,8 +5,8 @@ import toast from 'react-hot-toast';
 import { settingsApi, zendeskApi, exportApi, apiKeyApi, analyticsApi, adminAnalyticsApi, aiAnalyticsApi, macroApi, databaseApi } from '../lib/api';
 import Layout from '../components/Layout';
 
-type TabType = 'notifications' | 'automation' | 'sendgrid' | 'import' | 'export' | 'api' | 'maintenance' | 'widget' | 'permissions';
-const validTabs: TabType[] = ['notifications', 'automation', 'sendgrid', 'import', 'export', 'api', 'maintenance', 'widget', 'permissions'];
+type TabType = 'notifications' | 'automation' | 'sendgrid' | 'import' | 'export' | 'api' | 'maintenance' | 'widget' | 'permissions' | 'security';
+const validTabs: TabType[] = ['notifications', 'automation', 'sendgrid', 'import', 'export', 'api', 'maintenance', 'widget', 'permissions', 'security'];
 
 interface ApiKey {
   id: string;
@@ -1100,6 +1100,11 @@ const AdminSettings: React.FC = () => {
     { id: 'widget' as TabType, label: 'Widget', icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+    )},
+    { id: 'security' as TabType, label: 'Security', icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
       </svg>
     )},
     { id: 'permissions' as TabType, label: 'Permissions', icon: (
@@ -3714,6 +3719,168 @@ const AdminSettings: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === 'security' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  Two-Factor Authentication Settings
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  Configure 2FA requirements and manage grace periods for users
+                </p>
+              </div>
+
+              {/* Global Enforcement Toggle */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-base font-medium text-gray-900 dark:text-white">
+                      Enable 2FA Enforcement
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Global kill switch for 2FA enforcement. When disabled, 2FA requirements are not enforced.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer ml-4">
+                    <input
+                      type="checkbox"
+                      checked={settings?.twoFactorEnforcementEnabled ?? false}
+                      onChange={(e) => {
+                        console.log('[2FA Settings] Toggling enforcement:', e.target.checked);
+                        handleSettingChange('twoFactorEnforcementEnabled', e.target.checked);
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Role Requirements */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-base font-medium text-gray-900 dark:text-white">
+                        Require 2FA for Admins
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Admins must enable 2FA to access the system
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer ml-4">
+                      <input
+                        type="checkbox"
+                        checked={settings?.require2FAForAdmins ?? true}
+                        onChange={(e) => {
+                          console.log('[2FA Settings] Toggling admin requirement:', e.target.checked);
+                          handleSettingChange('require2FAForAdmins', e.target.checked);
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-base font-medium text-gray-900 dark:text-white">
+                        Require 2FA for Agents
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Agents must enable 2FA to access the system
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer ml-4">
+                      <input
+                        type="checkbox"
+                        checked={settings?.require2FAForAgents ?? true}
+                        onChange={(e) => {
+                          console.log('[2FA Settings] Toggling agent requirement:', e.target.checked);
+                          handleSettingChange('require2FAForAgents', e.target.checked);
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Allow for Users */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-base font-medium text-gray-900 dark:text-white">
+                      Allow 2FA for Users
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Allow regular users to optionally enable 2FA (not required)
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer ml-4">
+                    <input
+                      type="checkbox"
+                      checked={settings?.allow2FAForUsers ?? true}
+                      onChange={(e) => {
+                        console.log('[2FA Settings] Toggling user allowance:', e.target.checked);
+                        handleSettingChange('allow2FAForUsers', e.target.checked);
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Grace Period Setting */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <div>
+                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
+                    Grace Period
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Number of days users have to enable 2FA after enforcement is turned on
+                  </p>
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="number"
+                      min="1"
+                      max="90"
+                      value={settings?.twoFactorGracePeriodDays ?? 7}
+                      onChange={(e) => {
+                        const days = parseInt(e.target.value);
+                        console.log('[2FA Settings] Setting grace period days:', days);
+                        if (days >= 1 && days <= 90) {
+                          handleSettingChange('twoFactorGracePeriodDays', days);
+                        }
+                      }}
+                      className="block w-24 rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">days</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    console.log('[2FA Settings] Saving settings...');
+                    updateSettings.mutate(settings);
+                  }}
+                  disabled={updateSettings.isPending}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updateSettings.isPending ? 'Saving...' : 'Save Security Settings'}
+                </button>
               </div>
             </div>
           )}

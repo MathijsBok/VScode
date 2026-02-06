@@ -8,6 +8,7 @@ import { ViewProvider } from './contexts/ViewContext';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
+import TwoFactorHandler from './components/TwoFactorHandler';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -27,6 +28,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminBugs from './pages/AdminBugs';
 import ApiDocs from './pages/ApiDocs';
 import FeedbackPage from './pages/FeedbackPage';
+import UserSettings from './pages/UserSettings';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -348,6 +350,7 @@ function App() {
                     />
 
                     {/* Common Routes */}
+                    <Route path="/settings" element={<UserSettings />} />
                     <Route path="/tickets/new" element={<CreateTicket />} />
                     <Route path="/tickets/:id" element={<TicketDetail />} />
                     <Route path="/api-docs" element={<ApiDocs />} />
@@ -365,6 +368,7 @@ function App() {
                 </SignedOut>
               </BrowserRouter>
               <Toaster position="top-right" />
+              <TwoFactorHandler />
             </ViewProvider>
           </NotificationProvider>
         </QueryClientProvider>

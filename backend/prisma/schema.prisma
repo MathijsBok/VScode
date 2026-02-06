@@ -66,6 +66,10 @@ model User {
   isBlocked      Boolean   @default(false)
   blockedAt      DateTime?
   blockedReason  String?
+  has2FAEnabled              Boolean   @default(false)   // Cached from Clerk
+  has2FAEnrolledAt           DateTime?                   // First 2FA enrollment
+  twoFactorGracePeriodEnd    DateTime?                   // Grace period deadline
+  twoFactorLastSyncedAt      DateTime?                   // Last Clerk sync
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -393,6 +397,13 @@ model Settings {
   agentCanAccessEmailTemplates  Boolean  @default(false)  // New pages default to false
   agentCanAccessUsers           Boolean  @default(false)  // New pages default to false
   agentCanCreateTickets         Boolean  @default(true)
+
+  // 2FA/Passkey Settings
+  require2FAForAgents          Boolean  @default(true)
+  require2FAForAdmins          Boolean  @default(true)
+  allow2FAForUsers             Boolean  @default(true)
+  twoFactorGracePeriodDays     Int      @default(7)
+  twoFactorEnforcementEnabled  Boolean  @default(false)  // Global kill switch
 
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt

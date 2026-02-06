@@ -7,6 +7,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { settingsApi } from '../lib/api';
 import NotificationBell from './NotificationBell';
 import ChatWidget from './ChatWidget';
+import GracePeriodWarning from './GracePeriodWarning';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -262,6 +263,9 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePadding = false }) => {
           </div>
         )}
       </header>
+
+      {/* Grace Period Warning Banner */}
+      <GracePeriodWarning />
 
       {/* Main content */}
       <main className={hidePadding ? '' : 'max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
