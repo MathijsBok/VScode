@@ -200,17 +200,31 @@ export default function SecuritySettings() {
           appearance={{
             elements: {
               rootBox: 'w-full',
-              card: 'dark:bg-gray-800 dark:text-white shadow-none border-0',
-              navbar: 'dark:bg-gray-700',
-              navbarButton: 'dark:text-gray-300 dark:hover:bg-gray-600',
-              pageScrollBox: 'dark:bg-gray-800',
-              profileSection: 'dark:bg-gray-800',
-              profileSectionTitle: 'dark:text-white',
-              profileSectionContent: 'dark:text-gray-300',
-              formFieldInput: 'dark:bg-gray-700 dark:text-white dark:border-gray-600',
-              formButtonPrimary: 'bg-blue-600 hover:bg-blue-700',
-              badge: 'dark:bg-gray-700 dark:text-gray-300',
-              accordionTriggerButton: 'dark:text-gray-300 dark:hover:bg-gray-700'
+              card: 'bg-white dark:bg-gray-800 shadow-none border-0',
+              navbar: 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600',
+              navbarButton: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600',
+              navbarButtonActive: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-gray-600',
+              pageScrollBox: 'bg-white dark:bg-gray-800',
+              page: 'bg-white dark:bg-gray-800',
+              profileSection: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+              profileSectionTitle: 'text-gray-900 dark:text-white',
+              profileSectionContent: 'text-gray-700 dark:text-gray-300',
+              profileSectionPrimaryButton: 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700',
+              formFieldLabel: 'text-gray-700 dark:text-gray-300',
+              formFieldInput: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600',
+              formFieldInputShowPasswordButton: 'text-gray-500 dark:text-gray-400',
+              formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
+              formButtonReset: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700',
+              badge: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+              badgePrimary: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
+              accordionTriggerButton: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700',
+              accordionContent: 'text-gray-700 dark:text-gray-300',
+              dividerLine: 'bg-gray-200 dark:bg-gray-700',
+              dividerText: 'text-gray-500 dark:text-gray-400',
+              modalCloseButton: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
+              identityPreview: 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600',
+              identityPreviewText: 'text-gray-900 dark:text-white',
+              identityPreviewEditButton: 'text-blue-600 dark:text-blue-400'
             }
           }}
           routing="hash"
