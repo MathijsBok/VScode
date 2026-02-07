@@ -17,11 +17,20 @@ export default function GracePeriodWarning() {
   const userRole = user?.publicMetadata?.role as string | undefined;
 
   useEffect(() => {
-    const fetchSecurityStatus = async () => {
+    const fetchSecurityStatus = async (shouldSync = false) => {
       try {
         // Only fetch if user is agent or admin
         if (userRole !== 'AGENT' && userRole !== 'ADMIN') {
           return;
+        }
+
+        // Sync with Clerk first if requested to ensure we have latest 2FA status
+        if (shouldSync) {
+          try {
+            await api.post('/security/sync');
+          } catch (syncError) {
+            console.error('Error syncing 2FA status:', syncError);
+          }
         }
 
         const response = await api.get('/security/status');
@@ -31,7 +40,25 @@ export default function GracePeriodWarning() {
       }
     };
 
-    fetchSecurityStatus();
+    // Initial fetch with sync
+    fetchSecurityStatus(true);
+
+    // Refresh when page becomes visible (user might have enabled 2FA in another tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchSecurityStatus(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Periodic refresh every 30 seconds to catch 2FA enablement
+    const interval = setInterval(() => fetchSecurityStatus(true), 30000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
+    };
   }, [userRole]);
 
   // Don't show banner if:
