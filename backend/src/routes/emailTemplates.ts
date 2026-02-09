@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { prisma } from '../lib/prisma';
-import { requireAuth, requireAgent, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireAgent, requireAgentPermission, AuthRequest } from '../middleware/auth';
 import { EmailTemplateType } from '@prisma/client';
 
 const router = Router();
@@ -192,7 +192,7 @@ function replacePlaceholders(template: string, data: Record<string, string>): st
 }
 
 // Get all email templates (creates defaults if none exist)
-router.get('/', requireAuth, requireAgent, async (_req: AuthRequest, res: Response) => {
+router.get('/', requireAuth, requireAgent, requireAgentPermission('agentCanAccessEmailTemplates'), async (_req: AuthRequest, res: Response) => {
   try {
     // Check if templates exist
     const existingTemplates = await prisma.emailTemplate.findMany();
@@ -231,7 +231,7 @@ router.get('/', requireAuth, requireAgent, async (_req: AuthRequest, res: Respon
 });
 
 // Get single email template
-router.get('/:id', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.get('/:id', requireAuth, requireAgent, requireAgentPermission('agentCanAccessEmailTemplates'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -254,6 +254,7 @@ router.get('/:id', requireAuth, requireAgent, async (req: AuthRequest, res: Resp
 router.patch('/:id',
   requireAuth,
   requireAgent,
+  requireAgentPermission('agentCanAccessEmailTemplates'),
   [
     body('subject').optional().isString().notEmpty(),
     body('bodyHtml').optional().isString().notEmpty(),
@@ -299,7 +300,7 @@ router.patch('/:id',
 );
 
 // Preview email template with sample data
-router.post('/:id/preview', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.post('/:id/preview', requireAuth, requireAgent, requireAgentPermission('agentCanAccessEmailTemplates'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -334,7 +335,7 @@ router.post('/:id/preview', requireAuth, requireAgent, async (req: AuthRequest, 
 });
 
 // Reset template to default
-router.post('/:id/reset', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.post('/:id/reset', requireAuth, requireAgent, requireAgentPermission('agentCanAccessEmailTemplates'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 

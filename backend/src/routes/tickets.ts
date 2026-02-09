@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { prisma } from '../lib/prisma';
-import { requireAuth, requireAgent, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireAgent, requireAdmin, AuthRequest } from '../middleware/auth';
 import { generateTicketSummary, generateKnowledgeBasedSolution, getKnowledgeContent } from '../services/aiService';
 import { getOrCreateEmailThread, sendTicketCreatedEmail, sendTicketResolvedEmail, sendFeedbackRequestEmail } from '../services/emailService';
 import { getCountryFromIP } from '../lib/geolocation';
@@ -401,6 +401,17 @@ router.post('/',
       const { subject, channel, priority, categoryId, formId, relatedTicketId, description, formResponses, userAgent, shownAiSuggestion, requesterEmail } = req.body;
       const userId = req.userId!;
       const userRole = req.userRole;
+
+      // Check if the user is blocked
+      if (userRole === 'USER') {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { isBlocked: true }
+        });
+        if (currentUser?.isBlocked) {
+          return res.status(403).json({ error: 'Your account has been blocked. You cannot create tickets.' });
+        }
+      }
 
       // Determine the requester ID
       let requesterId = userId;
@@ -954,10 +965,10 @@ router.patch('/bulk/update',
   }
 );
 
-// Bulk delete tickets
+// Bulk delete tickets (admin only - destructive operation)
 router.delete('/bulk/delete',
   requireAuth,
-  requireAgent,
+  requireAdmin,
   [
     body('ticketIds').isArray().notEmpty(),
     body('ticketIds.*').isUUID()

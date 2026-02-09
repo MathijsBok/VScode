@@ -223,6 +223,33 @@ export const requireTwoFactor = async (req: AuthRequest, res: Response, next: Ne
   }
 };
 
+// Middleware to check agent-specific permission flags from settings.
+// Admins always pass through. Agents are checked against the settings flag.
+export const requireAgentPermission = (permissionKey: string) => {
+  return async (req: AuthRequest, res: Response, next: NextFunction) => {
+    // Admins bypass agent permission checks
+    if (req.userRole === 'ADMIN') {
+      return next();
+    }
+
+    try {
+      const settings = await prisma.settings.findFirst();
+      const allowed = settings ? (settings as any)[permissionKey] : true;
+
+      // Default to true if setting doesn't exist (fail open for backwards compatibility)
+      if (allowed === false) {
+        return res.status(403).json({ error: 'Forbidden: You do not have access to this feature' });
+      }
+
+      return next();
+    } catch (error) {
+      console.error('Error checking agent permission:', error);
+      // Fail open to prevent lockouts
+      return next();
+    }
+  };
+};
+
 // Note: requireAgent and requireAdmin now include 2FA enforcement
 // Express will flatten these arrays when used in routes
 export const requireAgent = [requireAuth, requireTwoFactor, requireRole('AGENT', 'ADMIN')];

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,7 +8,45 @@ import * as os from 'os';
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 
 const router = Router();
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+// Validate parsed database URL components to ensure they contain only safe characters
+const SAFE_DB_COMPONENT = /^[a-zA-Z0-9._\-]+$/;
+function validateDbComponent(value: string, name: string): string {
+  if (!SAFE_DB_COMPONENT.test(value)) {
+    throw new Error(`Invalid ${name} in DATABASE_URL: contains unsafe characters`);
+  }
+  return value;
+}
+
+// Parse DATABASE_URL into validated components
+function parseDatabaseUrl() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL not configured');
+  }
+
+  const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+)?(?::([^@]+))?@([^:\/]+)(?::(\d+))?\/([^?]+)/);
+  if (!urlMatch) {
+    throw new Error('Invalid DATABASE_URL format');
+  }
+
+  const [, user, password, host, port, database] = urlMatch;
+
+  // Validate components (password is passed via env var, not validated for shell safety)
+  const validatedHost = validateDbComponent(host, 'host');
+  const validatedPort = validateDbComponent(port || '5432', 'port');
+  const validatedUser = validateDbComponent(user || 'postgres', 'user');
+  const validatedDatabase = validateDbComponent(database, 'database');
+
+  // Build environment with password if provided
+  const env = { ...process.env };
+  if (password) {
+    env.PGPASSWORD = password;
+  }
+
+  return { host: validatedHost, port: validatedPort, user: validatedUser, database: validatedDatabase, env };
+}
 
 // Configure multer for database dump file uploads
 const upload = multer({
@@ -50,36 +88,14 @@ router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (
     // Write the uploaded file to a temp location
     fs.writeFileSync(tempFilePath, req.file.buffer);
 
-    // Get database connection info from environment
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      throw new Error('DATABASE_URL not configured');
-    }
-
-    // Parse the database URL
-    const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+)?(?::([^@]+))?@([^:\/]+)(?::(\d+))?\/([^?]+)/);
-    if (!urlMatch) {
-      throw new Error('Invalid DATABASE_URL format');
-    }
-
-    const [, user, password, host, port, database] = urlMatch;
-    const dbPort = port || '5432';
-
-    // Build environment with password if provided
-    const env = { ...process.env };
-    if (password) {
-      env.PGPASSWORD = password;
-    }
-
-    const psqlUser = user || 'postgres';
+    const { host, port, user: psqlUser, database, env } = parseDatabaseUrl();
 
     // Step 1: Terminate all other connections to the database
     console.log('[Database Import] Terminating existing connections...');
     const terminateSQL = `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${database}' AND pid <> pg_backend_pid();`;
-    const terminateCommand = `psql -h ${host} -p ${dbPort} -U ${psqlUser} -d postgres -c "${terminateSQL}"`;
 
     try {
-      await execAsync(terminateCommand, { env });
+      await execFileAsync('psql', ['-h', host, '-p', port, '-U', psqlUser, '-d', 'postgres', '-c', terminateSQL], { env });
       console.log('[Database Import] Connections terminated');
     } catch (termError: any) {
       console.log('[Database Import] Warning terminating connections:', termError.message);
@@ -87,7 +103,7 @@ router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (
 
     // Step 2: Drop all tables, sequences, and types in public schema
     console.log('[Database Import] Dropping all existing objects...');
-    const dropAllSQL = `DO \\$\\$ DECLARE
+    const dropAllSQL = `DO $$ DECLARE
         r RECORD;
       BEGIN
         FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
@@ -99,34 +115,36 @@ router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (
         FOR r IN (SELECT typname FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE n.nspname = 'public' AND t.typtype = 'e') LOOP
           EXECUTE 'DROP TYPE IF EXISTS public.' || quote_ident(r.typname) || ' CASCADE';
         END LOOP;
-      END \\$\\$;`;
-    const dropCommand = `psql -h ${host} -p ${dbPort} -U ${psqlUser} -d ${database} -c "${dropAllSQL}"`;
+      END $$;`;
 
     try {
-      await execAsync(dropCommand, { env });
+      await execFileAsync('psql', ['-h', host, '-p', port, '-U', psqlUser, '-d', database, '-c', dropAllSQL], { env });
       console.log('[Database Import] All objects dropped successfully');
     } catch (dropError: any) {
       console.log('[Database Import] Warning during drop:', dropError.message);
       // Continue anyway - objects might not exist
     }
 
-    // Step 2: Import the database
+    // Step 3: Import the database
     const ext = path.extname(req.file.originalname).toLowerCase();
-    let command: string;
+    let importArgs: string[];
+    let importCmd: string;
 
     if (ext === '.sql') {
       // Plain SQL file - use psql
-      command = `psql -h ${host} -p ${dbPort} -U ${psqlUser} -d ${database} -f "${tempFilePath}"`;
+      importCmd = 'psql';
+      importArgs = ['-h', host, '-p', port, '-U', psqlUser, '-d', database, '-f', tempFilePath];
     } else {
       // Custom format dump - use pg_restore
       // --no-owner and --no-acl ignore ownership and permissions
-      command = `pg_restore -h ${host} -p ${dbPort} -U ${psqlUser} -d ${database} --no-owner --no-acl "${tempFilePath}"`;
+      importCmd = 'pg_restore';
+      importArgs = ['-h', host, '-p', port, '-U', psqlUser, '-d', database, '--no-owner', '--no-acl', tempFilePath];
     }
 
-    console.log(`[Database Import] Executing: ${ext === '.sql' ? 'psql' : 'pg_restore'}...`);
+    console.log(`[Database Import] Executing: ${importCmd}...`);
 
     try {
-      const { stdout, stderr } = await execAsync(command, {
+      const { stdout, stderr } = await execFileAsync(importCmd, importArgs, {
         env,
         maxBuffer: 50 * 1024 * 1024 // 50MB output buffer
       });
@@ -186,33 +204,13 @@ router.get('/export', requireAuth, requireAdmin, async (req: AuthRequest, res: R
   try {
     console.log(`[Database Export] Starting export (format: ${format})...`);
 
-    // Get database connection info from environment
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      throw new Error('DATABASE_URL not configured');
-    }
-
-    // Parse the database URL
-    const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+)?(?::([^@]+))?@([^:\/]+)(?::(\d+))?\/([^?]+)/);
-    if (!urlMatch) {
-      throw new Error('Invalid DATABASE_URL format');
-    }
-
-    const [, user, password, host, port, database] = urlMatch;
-    const dbPort = port || '5432';
-
-    // Build environment with password if provided
-    const env = { ...process.env };
-    if (password) {
-      env.PGPASSWORD = password;
-    }
+    const { host, port, user: pgUser, database, env } = parseDatabaseUrl();
 
     // Use pg_dump - format flag: 'c' for custom, 'p' for plain SQL
     const formatFlag = format === 'sql' ? 'p' : 'c';
-    const command = `pg_dump -h ${host} -p ${dbPort} -U ${user || 'postgres'} -d ${database} -F ${formatFlag} -f "${tempFilePath}"`;
 
     console.log('[Database Export] Running pg_dump...');
-    await execAsync(command, { env });
+    await execFileAsync('pg_dump', ['-h', host, '-p', port, '-U', pgUser, '-d', database, '-F', formatFlag, '-f', tempFilePath], { env });
 
     // Get file stats
     const stats = fs.statSync(tempFilePath);

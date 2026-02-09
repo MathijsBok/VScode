@@ -1,8 +1,34 @@
 import { Router, Response } from 'express';
 import { body, validationResult } from 'express-validator';
+import sanitizeHtml from 'sanitize-html';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { sendAgentReplyEmail } from '../services/emailService';
+
+// Sanitization options: allow safe HTML from rich text editor, strip dangerous tags/attributes
+const sanitizeOptions: sanitizeHtml.IOptions = {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+    'img', 'span', 'u', 's', 'mark', 'sub', 'sup', 'br', 'hr',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
+  ]),
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    '*': ['class', 'style'],
+    'img': ['src', 'alt', 'width', 'height'],
+    'a': ['href', 'target', 'rel']
+  },
+  allowedSchemes: ['http', 'https', 'mailto'],
+  allowedStyles: {
+    '*': {
+      'color': [/.*/],
+      'background-color': [/.*/],
+      'text-align': [/.*/],
+      'font-size': [/.*/],
+      'font-weight': [/.*/],
+      'text-decoration': [/.*/]
+    }
+  }
+};
 
 const router = Router();
 
@@ -27,6 +53,17 @@ router.post('/',
       const userId = req.userId!;
       const userRole = req.userRole!;
 
+      // Check if the user is blocked
+      if (userRole === 'USER') {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { isBlocked: true }
+        });
+        if (currentUser?.isBlocked) {
+          return res.status(403).json({ error: 'Your account has been blocked. You cannot post comments.' });
+        }
+      }
+
       // Verify ticket exists
       const ticket = await prisma.ticket.findUnique({
         where: { id: ticketId }
@@ -44,12 +81,15 @@ router.post('/',
         return res.status(403).json({ error: 'Forbidden' });
       }
 
+      // Sanitize HTML content to prevent XSS
+      const sanitizedBody = sanitizeHtml(commentBody, sanitizeOptions);
+
       // Create comment and update ticket
       const comment = await prisma.comment.create({
         data: {
           ticketId,
           authorId: userId,
-          body: commentBody,
+          body: sanitizedBody,
           bodyPlain,
           isInternal: isInternalNote,
           channel: 'WEB'

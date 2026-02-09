@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { prisma } from '../lib/prisma';
-import { requireAuth, requireAgent, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireAgent, requireAgentPermission, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -36,7 +36,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // Reorder forms (admin only) - MUST be before /:id routes
-router.patch('/reorder', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.patch('/reorder', requireAuth, requireAgent, requireAgentPermission('agentCanAccessForms'), async (req: AuthRequest, res: Response) => {
   try {
     const { formIds } = req.body;
 
@@ -95,6 +95,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/',
   requireAuth,
   requireAgent,
+  requireAgentPermission('agentCanAccessForms'),
   [
     body('name').isString().notEmpty(),
     body('description').optional().isString(),
@@ -162,6 +163,7 @@ router.post('/',
 router.patch('/:id',
   requireAuth,
   requireAgent,
+  requireAgentPermission('agentCanAccessForms'),
   [
     body('name').optional().isString(),
     body('description').optional().isString(),
@@ -237,7 +239,7 @@ router.patch('/:id',
 );
 
 // Delete form (admin only)
-router.delete('/:id', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, requireAgent, requireAgentPermission('agentCanAccessForms'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 

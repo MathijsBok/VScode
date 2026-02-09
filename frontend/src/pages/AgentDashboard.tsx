@@ -10,6 +10,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useTicketNotifications } from '../hooks/useTicketNotifications';
 import toast from 'react-hot-toast';
 import FeedbackStatsWidget from '../components/FeedbackStatsWidget';
+import ConfirmModal from '../components/ConfirmModal';
 
 type SortField = 'ticketNumber' | 'subject' | 'requester' | 'status' | 'priority' | 'assignee' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';
@@ -49,6 +50,7 @@ const AgentDashboard: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; type: 'delete' | 'spam' | null }>({ isOpen: false, type: null });
 
   const { permission, requestPermission, isSupported } = useNotification();
   const { newTicketCount, isPolling } = useTicketNotifications({
@@ -349,9 +351,7 @@ const AgentDashboard: React.FC = () => {
 
   const handleBulkDelete = () => {
     if (selectedTickets.length === 0) return;
-    if (window.confirm(`Are you sure you want to delete ${selectedTickets.length} ticket(s)?`)) {
-      bulkDeleteMutation.mutate(selectedTickets);
-    }
+    setConfirmModal({ isOpen: true, type: 'delete' });
   };
 
   const blockUserMutation = useMutation({
@@ -360,30 +360,27 @@ const AgentDashboard: React.FC = () => {
     }
   });
 
-  const handleMarkAsSpam = async () => {
+  const handleMarkAsSpam = () => {
     if (selectedTickets.length === 0) return;
+    setConfirmModal({ isOpen: true, type: 'spam' });
+  };
 
-    // Get unique requester IDs from selected tickets
-    const selectedTicketData = paginatedTickets?.filter((t: any) => selectedTickets.includes(t.id)) || [];
-    const requesterIds = [...new Set(selectedTicketData.map((t: any) => t.requesterId))];
-
-    const confirmMessage = `Mark ${selectedTickets.length} ticket(s) as spam and block ${requesterIds.length} user(s)?\n\nThis will:\n- Close the selected tickets\n- Block the requester(s) from accessing the system`;
-
-    if (window.confirm(confirmMessage)) {
+  const handleConfirmAction = async () => {
+    if (confirmModal.type === 'delete') {
+      bulkDeleteMutation.mutate(selectedTickets);
+    } else if (confirmModal.type === 'spam') {
+      const selectedTicketData = paginatedTickets?.filter((t: any) => selectedTickets.includes(t.id)) || [];
+      const requesterIds = [...new Set(selectedTicketData.map((t: any) => t.requesterId))];
       try {
-        // Block all unique requesters
         await Promise.all(requesterIds.map(id => blockUserMutation.mutateAsync(id as string)));
         toast.success(`${requesterIds.length} user(s) blocked`);
-
-        // Close the tickets
         bulkUpdateMutation.mutate({ ticketIds: selectedTickets, status: 'SOLVED' });
-
-        // Invalidate users query in case admin page is also open
         queryClient.invalidateQueries({ queryKey: ['allUsers'] });
       } catch (error) {
         toast.error('Failed to block some users');
       }
     }
+    setConfirmModal({ isOpen: false, type: null });
   };
 
   const SortIcon: React.FC<{ field: SortField }> = ({ field }) => {
@@ -1282,6 +1279,20 @@ const AgentDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.type === 'spam' ? 'Mark as Spam' : 'Delete Tickets'}
+        message={
+          confirmModal.type === 'spam'
+            ? `Mark ${selectedTickets.length} ticket(s) as spam and block the requester(s)? This will close the selected tickets and block the requester(s) from accessing the system.`
+            : `Are you sure you want to delete ${selectedTickets.length} ticket(s)?`
+        }
+        confirmLabel={confirmModal.type === 'spam' ? 'Mark as Spam' : 'Delete'}
+        confirmVariant="danger"
+        onConfirm={handleConfirmAction}
+        onCancel={() => setConfirmModal({ isOpen: false, type: null })}
+      />
     </Layout>
   );
 };

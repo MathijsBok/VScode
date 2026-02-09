@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { fieldLibraryApi } from '../lib/api';
 import Layout from '../components/Layout';
+import ConfirmModal from '../components/ConfirmModal';
 import { format } from 'date-fns';
 import { FormFieldLibrary } from '../types';
 
@@ -29,6 +30,7 @@ const AdminFieldLibrary: React.FC = () => {
   const [options, setOptions] = useState<string[]>([]);
   const [optionInput, setOptionInput] = useState('');
   const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; fieldId: string | null }>({ isOpen: false, fieldId: null });
 
   const { data: fields, isLoading } = useQuery({
     queryKey: ['fieldLibrary'],
@@ -535,11 +537,7 @@ const AdminFieldLibrary: React.FC = () => {
                           </svg>
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm('Are you sure you want to delete this field? This action cannot be undone if the field is not in use.')) {
-                              deleteMutation.mutate(field.id);
-                            }
-                          }}
+                          onClick={() => setDeleteModal({ isOpen: true, fieldId: field.id })}
                           className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                           title="Delete"
                         >
@@ -582,6 +580,21 @@ const AdminFieldLibrary: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Field"
+        message="Are you sure you want to delete this field? This action cannot be undone if the field is not in use."
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={() => {
+          if (deleteModal.fieldId) {
+            deleteMutation.mutate(deleteModal.fieldId);
+          }
+          setDeleteModal({ isOpen: false, fieldId: null });
+        }}
+        onCancel={() => setDeleteModal({ isOpen: false, fieldId: null })}
+      />
     </Layout>
   );
 };

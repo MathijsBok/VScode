@@ -64,7 +64,41 @@ router.get('/agent-permissions', requireAuth, async (_req: AuthRequest, res: Res
 router.patch('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+
+    // Whitelist of allowed settings fields to prevent mass assignment
+    const ALLOWED_FIELDS = [
+      // Email Settings
+      'sendTicketCreatedEmail', 'sendTicketAssignedEmail', 'sendTicketResolvedEmail',
+      'sendPendingTicketReminder', 'pendingTicketReminderHours',
+      // Auto-close / Auto-solve
+      'autoCloseEnabled', 'autoCloseHours', 'autoSolveEnabled', 'autoSolveHours',
+      // General
+      'defaultTicketPriority', 'allowCustomerReopenClosed',
+      // Attachment Cleanup
+      'autoDeleteAttachmentsEnabled', 'autoDeleteAttachmentsDays',
+      // AI Settings
+      'aiSummaryEnabled', 'anthropicApiKey', 'ticketSuggestionsEnabled', 'ticketSuggestionsApiKey',
+      'aiKnowledgeUrls', 'aiKnowledgeRefreshDays',
+      // Chat Widget
+      'chatWidgetEnabled', 'chatWidgetWelcomeMessage', 'chatWidgetVisibleToUsers',
+      'chatWidgetVisibleToAgents', 'chatWidgetEscalationThreshold',
+      'chatWidgetSystemInstructions', 'chatWidgetCompanyName', 'chatWidgetTone', 'chatWidgetFaqItems',
+      // SendGrid
+      'sendgridEnabled', 'sendgridApiKey', 'sendgridFromEmail', 'sendgridFromName', 'sendgridInboundDomain',
+      // Agent Permissions
+      'agentCanAccessAnalytics', 'agentCanAccessForms', 'agentCanAccessFieldLibrary',
+      'agentCanAccessMacros', 'agentCanAccessBugReports', 'agentCanAccessEmailTemplates',
+      'agentCanAccessUsers', 'agentCanCreateTickets',
+      // 2FA Settings
+      'require2FAForAgents', 'require2FAForAdmins', 'twoFactorGracePeriodDays', 'twoFactorEnforcementEnabled'
+    ];
+
+    const updateData: Record<string, any> = {};
+    for (const key of Object.keys(req.body)) {
+      if (ALLOWED_FIELDS.includes(key)) {
+        updateData[key] = req.body[key];
+      }
+    }
 
     // Validate numeric fields
     if (updateData.pendingTicketReminderHours !== undefined && updateData.pendingTicketReminderHours < 1) {

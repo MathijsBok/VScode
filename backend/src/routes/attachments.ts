@@ -77,6 +77,7 @@ router.post('/upload',
 
       const { ticketId, commentId } = req.body;
       const userId = req.userId!;
+      const userRole = req.userRole!;
 
       if (!ticketId) {
         return res.status(400).json({ error: 'ticketId is required' });
@@ -84,11 +85,17 @@ router.post('/upload',
 
       // Verify ticket exists and user has access
       const ticket = await prisma.ticket.findUnique({
-        where: { id: ticketId }
+        where: { id: ticketId },
+        select: { id: true, requesterId: true }
       });
 
       if (!ticket) {
         return res.status(404).json({ error: 'Ticket not found' });
+      }
+
+      // Users can only upload attachments to their own tickets
+      if (userRole === 'USER' && ticket.requesterId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
       }
 
       const attachment = await prisma.attachment.create({

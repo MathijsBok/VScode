@@ -532,13 +532,13 @@ router.post('/import', requireAuth, requireAdmin, upload.single('file'), async (
     // This ensures new tickets get the next number after the highest imported ticket
     if (importedCount > 0) {
       try {
-        await prisma.$executeRawUnsafe(`
+        await prisma.$executeRaw`
           SELECT setval(
             pg_get_serial_sequence('"Ticket"', 'ticketNumber'),
             (SELECT COALESCE(MAX("ticketNumber"), 1) FROM "Ticket"),
             true
           )
-        `);
+        `;
       } catch (seqError) {
         console.error('Failed to reset ticket sequence:', seqError);
         // Non-fatal error, continue with response
@@ -873,14 +873,14 @@ router.post('/reset-ticket-sequence', requireAuth, requireAdmin, async (_req: Au
 
     const maxTicketNumber = maxResult._max.ticketNumber || 0;
 
-    // Reset the sequence
-    await prisma.$executeRawUnsafe(`
+    // Reset the sequence using parameterized query
+    await prisma.$executeRaw`
       SELECT setval(
         pg_get_serial_sequence('"Ticket"', 'ticketNumber'),
         ${maxTicketNumber},
         true
       )
-    `);
+    `;
 
     return res.json({
       success: true,

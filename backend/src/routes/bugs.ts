@@ -3,7 +3,7 @@ import multer, { MulterError } from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../lib/prisma';
-import { requireAuth, requireAgent, requireAdmin, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireAgent, requireAdmin, requireAgentPermission, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -88,7 +88,7 @@ const serializeBug = (bug: any) => ({
 });
 
 // Get all bugs (agents and admins)
-router.get('/', requireAuth, requireAgent, async (_req: AuthRequest, res: Response) => {
+router.get('/', requireAuth, requireAgent, requireAgentPermission('agentCanAccessBugReports'), async (_req: AuthRequest, res: Response) => {
   try {
     const bugs = await prisma.bug.findMany({
       include: {
@@ -138,6 +138,7 @@ router.post(
   '/',
   requireAuth,
   requireAgent,
+  requireAgentPermission('agentCanAccessBugReports'),
   handleUpload,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -277,7 +278,7 @@ router.post(
 );
 
 // View bug attachment inline (for preview)
-router.get('/attachments/:id/view', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.get('/attachments/:id/view', requireAuth, requireAgent, requireAgentPermission('agentCanAccessBugReports'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -303,7 +304,7 @@ router.get('/attachments/:id/view', requireAuth, requireAgent, async (req: AuthR
 });
 
 // Download bug attachment
-router.get('/attachments/:id/download', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.get('/attachments/:id/download', requireAuth, requireAgent, requireAgentPermission('agentCanAccessBugReports'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 

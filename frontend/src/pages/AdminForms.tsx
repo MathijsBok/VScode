@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { formApi, fieldLibraryApi } from '../lib/api';
 import Layout from '../components/Layout';
+import ConfirmModal from '../components/ConfirmModal';
 import { format } from 'date-fns';
 import { Form, FormFieldLibrary } from '../types';
 
@@ -21,6 +22,7 @@ const AdminForms: React.FC = () => {
   const [formDescription, setFormDescription] = useState('');
   const [fieldConfigs, setFieldConfigs] = useState<Array<{ fieldId: string; required: boolean }>>([]);
   const [draggedFormIndex, setDraggedFormIndex] = useState<number | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; formId: string | null }>({ isOpen: false, formId: null });
 
   const { data: forms, isLoading: formsLoading } = useQuery({
     queryKey: ['adminForms'],
@@ -656,11 +658,7 @@ const AdminForms: React.FC = () => {
                           </svg>
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm('Are you sure you want to delete this form?')) {
-                              deleteMutation.mutate(form.id);
-                            }
-                          }}
+                          onClick={() => setDeleteModal({ isOpen: true, formId: form.id })}
                           className={`p-1.5 rounded-md transition-colors ${
                             draggedFormIndex === index
                               ? "text-primary-foreground hover:bg-primary-foreground/20"
@@ -693,6 +691,21 @@ const AdminForms: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Form"
+        message="Are you sure you want to delete this form? This action cannot be undone."
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={() => {
+          if (deleteModal.formId) {
+            deleteMutation.mutate(deleteModal.formId);
+          }
+          setDeleteModal({ isOpen: false, formId: null });
+        }}
+        onCancel={() => setDeleteModal({ isOpen: false, formId: null })}
+      />
     </Layout>
   );
 };

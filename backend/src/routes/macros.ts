@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
 import { prisma } from '../lib/prisma';
-import { requireAuth, requireAgent, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireAgent, requireAgentPermission, AuthRequest } from '../middleware/auth';
 
 // Configure multer for file uploads
 const upload = multer({
@@ -14,7 +14,7 @@ const router = Router();
 
 // Get all macros
 // Agents and admins see all macros (both active and inactive)
-router.get('/', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.get('/', requireAuth, requireAgent, requireAgentPermission('agentCanAccessMacros'), async (req: AuthRequest, res: Response) => {
   try {
     const category = req.query.category as string | undefined;
 
@@ -38,7 +38,7 @@ router.get('/', requireAuth, requireAgent, async (req: AuthRequest, res: Respons
 });
 
 // Reorder macros (agents and admins) - MUST be before /:id routes
-router.patch('/reorder', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.patch('/reorder', requireAuth, requireAgent, requireAgentPermission('agentCanAccessMacros'), async (req: AuthRequest, res: Response) => {
   try {
     const { macroIds } = req.body;
 
@@ -64,7 +64,7 @@ router.patch('/reorder', requireAuth, requireAgent, async (req: AuthRequest, res
 });
 
 // Import macros from Zendesk JSON (agents and admins)
-router.post('/import', requireAuth, requireAgent, upload.single('file'), async (req: AuthRequest, res: Response) => {
+router.post('/import', requireAuth, requireAgent, requireAgentPermission('agentCanAccessMacros'), upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -190,7 +190,7 @@ router.post('/import', requireAuth, requireAgent, upload.single('file'), async (
 });
 
 // Get single macro
-router.get('/:id', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.get('/:id', requireAuth, requireAgent, requireAgentPermission('agentCanAccessMacros'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -213,6 +213,7 @@ router.get('/:id', requireAuth, requireAgent, async (req: AuthRequest, res: Resp
 router.post('/',
   requireAuth,
   requireAgent,
+  requireAgentPermission('agentCanAccessMacros'),
   [
     body('name').isString().notEmpty().withMessage('Name is required'),
     body('content').isString().notEmpty().withMessage('Content is required'),
@@ -254,6 +255,7 @@ router.post('/',
 router.patch('/:id',
   requireAuth,
   requireAgent,
+  requireAgentPermission('agentCanAccessMacros'),
   [
     body('name').optional().isString().notEmpty(),
     body('content').optional().isString().notEmpty(),
@@ -299,7 +301,7 @@ router.patch('/:id',
 );
 
 // Delete macro (agents and admins)
-router.delete('/:id', requireAuth, requireAgent, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, requireAgent, requireAgentPermission('agentCanAccessMacros'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
