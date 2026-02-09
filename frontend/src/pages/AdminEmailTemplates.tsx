@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { emailTemplateApi } from '../lib/api';
+import { emailTemplateApi, settingsApi } from '../lib/api';
 import Layout from '../components/Layout';
 import RichTextEditor from '../components/RichTextEditor';
 import toast from 'react-hot-toast';
@@ -49,6 +49,16 @@ const AdminEmailTemplates: React.FC = () => {
       return response.data as EmailTemplate[];
     }
   });
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const response = await settingsApi.get();
+      return response.data;
+    }
+  });
+
+  const fromName = settings?.sendgridFromName || 'Support Team';
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { subject?: string; bodyHtml?: string; bodyPlain?: string; isActive?: boolean } }) =>
@@ -451,6 +461,30 @@ const AdminEmailTemplates: React.FC = () => {
                         Shown as recipients will see it in their inbox
                       </span>
                     </div>
+                    <style>{`
+                      .email-preview-content p {
+                        margin: 0 0 1em 0;
+                        line-height: 1.6;
+                      }
+                      .email-preview-content p:last-child {
+                        margin-bottom: 0;
+                      }
+                      .email-preview-content p:empty,
+                      .email-preview-content p br:only-child {
+                        display: block;
+                        min-height: 1em;
+                      }
+                      .email-preview-content h1, .email-preview-content h2, .email-preview-content h3 {
+                        margin: 0 0 0.5em 0;
+                      }
+                      .email-preview-content a {
+                        color: #2563eb;
+                      }
+                      .email-preview-content ul, .email-preview-content ol {
+                        margin: 0 0 1em 0;
+                        padding-left: 1.5em;
+                      }
+                    `}</style>
                     <div className="rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
                       {/* Email client header simulation */}
                       <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
@@ -470,17 +504,18 @@ const AdminEmailTemplates: React.FC = () => {
                           <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                             {/* Header */}
                             <div style={{ backgroundColor: '#2563eb', padding: '24px 32px', textAlign: 'center' }}>
-                              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.02em' }}>Support Team</h1>
+                              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.02em' }}>{fromName}</h1>
                             </div>
                             {/* Content */}
                             <div
+                              className="email-preview-content"
                               style={{ backgroundColor: '#ffffff', padding: '32px', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}
                               dangerouslySetInnerHTML={{ __html: previewData.bodyHtml }}
                             />
                             {/* Footer */}
                             <div style={{ backgroundColor: '#f9fafb', padding: '20px 32px', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
                               <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
-                                This is an automated message from Support Team.<br />
+                                This is an automated message from {fromName}.<br />
                                 Please do not reply directly to this email unless your system supports email replies.
                               </p>
                             </div>
