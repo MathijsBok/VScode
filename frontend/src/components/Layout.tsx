@@ -7,6 +7,7 @@ import { settingsApi } from '../lib/api';
 import NotificationBell from './NotificationBell';
 import ChatWidget from './ChatWidget';
 import GracePeriodWarning from './GracePeriodWarning';
+import { useTwoFactor } from './TwoFactorGuard';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, hidePadding = false }) => {
   const { user } = useUser();
   const { theme, toggleTheme } = useTheme();
+  const { twoFactorBlocked } = useTwoFactor();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Default to 'USER' role if no role is set (new users)
@@ -33,6 +35,11 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePadding = false }) => {
   });
 
   const navigation = React.useMemo(() => {
+    // When 2FA is required but not enabled, only show Settings
+    if (twoFactorBlocked) {
+      return [{ name: 'Settings', href: '/settings' }];
+    }
+
     const nav = [];
 
     if (userRole === 'USER') {
@@ -86,7 +93,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePadding = false }) => {
     }
 
     return nav;
-  }, [userRole, agentPermissions]);
+  }, [userRole, agentPermissions, twoFactorBlocked]);
 
   const handleNavClick = () => {
     setMobileMenuOpen(false);
@@ -122,7 +129,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePadding = false }) => {
               ))}
 
               {/* Notifications bell for agents and admins */}
-              {(userRole === 'AGENT' || userRole === 'ADMIN') && (
+              {!twoFactorBlocked && (userRole === 'AGENT' || userRole === 'ADMIN') && (
                 <NotificationBell />
               )}
 
@@ -150,7 +157,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePadding = false }) => {
             {/* Mobile menu button and utilities */}
             <div className="flex lg:hidden items-center gap-3">
               {/* Notifications bell for agents and admins (mobile) */}
-              {(userRole === 'AGENT' || userRole === 'ADMIN') && (
+              {!twoFactorBlocked && (userRole === 'AGENT' || userRole === 'ADMIN') && (
                 <NotificationBell />
               )}
 

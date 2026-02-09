@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -11,6 +11,10 @@ interface SecurityStatus {
   gracePeriodDaysRemaining: number | null;
   gracePeriodExpired: boolean;
 }
+
+const TwoFactorContext = createContext({ twoFactorBlocked: false });
+
+export const useTwoFactor = () => useContext(TwoFactorContext);
 
 interface TwoFactorGuardProps {
   children: React.ReactNode;
@@ -110,7 +114,11 @@ export default function TwoFactorGuard({ children }: TwoFactorGuardProps) {
 
   // Allow access to settings page even when blocked (needed to enable 2FA)
   if (status === 'blocked' && location.pathname === '/settings') {
-    return <>{children}</>;
+    return (
+      <TwoFactorContext.Provider value={{ twoFactorBlocked: true }}>
+        {children}
+      </TwoFactorContext.Provider>
+    );
   }
 
   // 2FA required but not enabled - show blocking page
