@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 
 interface SecurityStatus {
@@ -20,6 +20,7 @@ export default function TwoFactorGuard({ children }: TwoFactorGuardProps) {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
+  const location = useLocation();
   const [status, setStatus] = useState<'loading' | 'allowed' | 'blocked'>('loading');
   const [securityStatus, setSecurityStatus] = useState<SecurityStatus | null>(null);
 
@@ -75,8 +76,6 @@ export default function TwoFactorGuard({ children }: TwoFactorGuardProps) {
   }, [isLoaded, isAgentOrAdmin]);
 
   const handleEnableTwoFactor = () => {
-    // Temporarily allow access so they can reach the settings page
-    setStatus('allowed');
     navigate('/settings');
   };
 
@@ -109,7 +108,12 @@ export default function TwoFactorGuard({ children }: TwoFactorGuardProps) {
     );
   }
 
-  // 2FA required but not enabled - show blocking modal
+  // Allow access to settings page even when blocked (needed to enable 2FA)
+  if (status === 'blocked' && location.pathname === '/settings') {
+    return <>{children}</>;
+  }
+
+  // 2FA required but not enabled - show blocking page
   if (status === 'blocked') {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
