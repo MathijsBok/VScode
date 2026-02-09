@@ -440,7 +440,10 @@ export const emailTemplateApi = {
     api.post(`/email-templates/${id}/preview`),
 
   reset: (id: string) =>
-    api.post(`/email-templates/${id}/reset`)
+    api.post(`/email-templates/${id}/reset`),
+
+  sendTest: (id: string, email: string) =>
+    api.post(`/email-templates/${id}/send-test`, { email })
 };
 
 // Notification API

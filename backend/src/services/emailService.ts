@@ -40,7 +40,7 @@ async function getSendGridSettings() {
 }
 
 // Get effective SendGrid configuration (database first, then env fallback)
-async function getEffectiveConfig() {
+export async function getEffectiveConfig() {
   const dbSettings = await getSendGridSettings();
 
   // If SendGrid is enabled in DB and has API key, use DB settings
@@ -113,7 +113,7 @@ function escapeHtml(str: string): string {
 }
 
 // Replace placeholders in template (HTML-escapes values to prevent injection)
-function replacePlaceholders(template: string, data: Record<string, string>): string {
+export function replacePlaceholders(template: string, data: Record<string, string>): string {
   let result = template;
   Object.entries(data).forEach(([key, value]) => {
     const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
@@ -124,6 +124,78 @@ function replacePlaceholders(template: string, data: Record<string, string>): st
     result = result.replace(regex, safeValue);
   });
   return result;
+}
+
+// Wrap template body content in a professional HTML email layout
+export function wrapInEmailLayout(bodyContent: string, fromName?: string): string {
+  const companyName = fromName || 'Support Team';
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Email</title>
+  <style>
+    /* Reset */
+    body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .email-bg { background-color: #1a1a2e !important; }
+      .email-container { background-color: #16213e !important; }
+      .email-header { background-color: #0f3460 !important; }
+      .email-content { background-color: #16213e !important; }
+      .email-footer { background-color: #1a1a2e !important; }
+      .email-text { color: #e0e0e0 !important; }
+      .email-text-muted { color: #a0a0a0 !important; }
+      .email-heading { color: #ffffff !important; }
+      .email-link { color: #64b5f6 !important; }
+      .email-border { border-color: #2a2a4a !important; }
+      h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
+      p, li, td, span, div { color: #e0e0e0 !important; }
+      a { color: #64b5f6 !important; }
+      strong, b { color: #f0f0f0 !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" class="email-bg" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f5f7;">
+    <tr>
+      <td align="center" style="padding: 24px 16px;">
+        <!-- Email container -->
+        <table role="presentation" class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td class="email-header" style="background-color: #2563eb; padding: 24px 32px; text-align: center;">
+              <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">${escapeHtml(companyName)}</h1>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td class="email-content" style="background-color: #ffffff; padding: 32px;">
+              ${bodyContent}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td class="email-footer email-border" style="background-color: #f9fafb; padding: 20px 32px; border-top: 1px solid #e5e7eb; text-align: center;">
+              <p class="email-text-muted" style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">
+                This is an automated message from ${escapeHtml(companyName)}.<br>
+                Please do not reply directly to this email unless your system supports email replies.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 // Get or create email thread for a ticket
@@ -238,7 +310,7 @@ export async function sendAgentReplyEmail(
 
     // Replace placeholders in template
     const subject = replacePlaceholders(template.subject, placeholders);
-    const htmlBody = replacePlaceholders(template.bodyHtml, placeholders);
+    const htmlBody = wrapInEmailLayout(replacePlaceholders(template.bodyHtml, placeholders), config.fromName);
     const textBody = replacePlaceholders(template.bodyPlain, placeholders);
 
     // Build email headers for threading
@@ -344,7 +416,7 @@ export async function sendTicketCreatedEmail(
 
     // Replace placeholders in template
     const subject = replacePlaceholders(template.subject, placeholders);
-    const htmlBody = replacePlaceholders(template.bodyHtml, placeholders);
+    const htmlBody = wrapInEmailLayout(replacePlaceholders(template.bodyHtml, placeholders), config.fromName);
     const textBody = replacePlaceholders(template.bodyPlain, placeholders);
 
     // Send email via SendGrid
@@ -441,7 +513,7 @@ export async function sendTicketResolvedEmail(
 
     // Replace placeholders in template
     const subject = replacePlaceholders(template.subject, placeholders);
-    const htmlBody = replacePlaceholders(template.bodyHtml, placeholders);
+    const htmlBody = wrapInEmailLayout(replacePlaceholders(template.bodyHtml, placeholders), config.fromName);
     const textBody = replacePlaceholders(template.bodyPlain, placeholders);
 
     // Build headers
@@ -635,7 +707,7 @@ export async function sendFeedbackRequestEmail(
 
     // Replace placeholders in template
     const subject = replacePlaceholders(template.subject, placeholders);
-    const htmlBody = replacePlaceholders(template.bodyHtml, placeholders);
+    const htmlBody = wrapInEmailLayout(replacePlaceholders(template.bodyHtml, placeholders), config.fromName);
     const textBody = replacePlaceholders(template.bodyPlain, placeholders);
 
     // Get email thread for headers

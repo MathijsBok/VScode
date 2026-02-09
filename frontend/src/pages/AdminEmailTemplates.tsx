@@ -12,7 +12,8 @@ const templateDescriptions: Record<string, string> = {
   NEW_REPLY: 'Sent to the user when an agent replies to their ticket',
   TICKET_RESOLVED: 'Sent to the user when their ticket is marked as resolved',
   PENDING_REMINDER_24H: 'Sent after 24 hours if the user hasn\'t responded to an agent\'s reply',
-  PENDING_REMINDER_48H: 'Final reminder sent after 48 hours before auto-resolve'
+  PENDING_REMINDER_48H: 'Final reminder sent after 48 hours before auto-resolve',
+  FEEDBACK_REQUEST: 'Sent to request customer satisfaction feedback after ticket resolution'
 };
 
 const placeholderInfo = [
@@ -20,7 +21,8 @@ const placeholderInfo = [
   { placeholder: '{{ticketNumber}}', description: 'The ticket number (e.g., 12345)' },
   { placeholder: '{{ticketSubject}}', description: 'The subject line of the ticket' },
   { placeholder: '{{ticketUrl}}', description: 'Direct link to view the ticket' },
-  { placeholder: '{{agentName}}', description: 'The name of the assigned agent' }
+  { placeholder: '{{agentName}}', description: 'The name of the assigned agent' },
+  { placeholder: '{{feedbackUrl}}', description: 'Link to feedback form (feedback template only)' }
 ];
 
 const AdminEmailTemplates: React.FC = () => {
@@ -35,6 +37,9 @@ const AdminEmailTemplates: React.FC = () => {
     bodyPlain: ''
   });
   const [resetConfirmTemplate, setResetConfirmTemplate] = useState<EmailTemplate | null>(null);
+  const [showTestEmail, setShowTestEmail] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [sendingTest, setSendingTest] = useState(false);
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ['emailTemplates'],
@@ -125,7 +130,23 @@ const AdminEmailTemplates: React.FC = () => {
     ticketNumber: '12345',
     ticketSubject: 'Sample Ticket Subject',
     ticketUrl: 'https://support.example.com/tickets/123',
-    agentName: 'Support Agent'
+    agentName: 'Support Agent',
+    feedbackUrl: 'https://support.example.com/feedback?token=sample-token'
+  };
+
+  const handleSendTest = async () => {
+    if (!editingTemplate || !testEmailAddress) return;
+    setSendingTest(true);
+    try {
+      await emailTemplateApi.sendTest(editingTemplate.id, testEmailAddress);
+      toast.success(`Test email sent to ${testEmailAddress}`);
+      setShowTestEmail(false);
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || 'Failed to send test email';
+      toast.error(msg);
+    } finally {
+      setSendingTest(false);
+    }
   };
 
   // Replace placeholders with sample data
@@ -334,6 +355,17 @@ const AdminEmailTemplates: React.FC = () => {
                   </button>
                   <div className="flex gap-3">
                     <button
+                      onClick={() => setShowTestEmail(!showTestEmail)}
+                      className="px-4 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Send Test
+                      </span>
+                    </button>
+                    <button
                       onClick={handlePreview}
                       className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                     >
@@ -349,7 +381,39 @@ const AdminEmailTemplates: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Preview Panel */}
+                {/* Send Test Email Panel */}
+                {showTestEmail && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send Test Email
+                    </h4>
+                    <p className="text-xs text-green-700 dark:text-green-300 mb-3">
+                      Send this template with sample data to an email address. The subject will be prefixed with [TEST]. Make sure SendGrid is configured in Admin Settings.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        value={testEmailAddress}
+                        onChange={(e) => setTestEmailAddress(e.target.value)}
+                        placeholder="Enter email address..."
+                        className="flex-1 px-3 py-2 text-sm border border-green-300 dark:border-green-700 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendTest()}
+                      />
+                      <button
+                        onClick={handleSendTest}
+                        disabled={sendingTest || !testEmailAddress}
+                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {sendingTest ? 'Sending...' : 'Send'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview Panel - shows full email layout as recipients see it */}
                 {previewData && (
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
                     <div className="flex items-center justify-between mb-4">
@@ -358,39 +422,45 @@ const AdminEmailTemplates: React.FC = () => {
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Shown as it appears in email clients
+                        Shown as recipients will see it in their inbox
                       </span>
                     </div>
                     <div className="rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
-                      {/* Email header simulation */}
+                      {/* Email client header simulation */}
                       <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex items-center gap-2 text-sm">
                           <span className="font-medium text-gray-600 dark:text-gray-300">Subject:</span>
                           <span className="text-gray-900 dark:text-white">{previewData.subject}</span>
                         </div>
                       </div>
-                      {/* Email body - always white background for accurate email preview */}
-                      <style>{`
-                        .email-preview-content { background-color: #ffffff !important; }
-                        .email-preview-content * { color: #1e293b !important; }
-                        .email-preview-content a { color: #2563eb !important; text-decoration: underline !important; }
-                        .email-preview-content strong, .email-preview-content b { font-weight: 600 !important; }
-                        .email-preview-content h1, .email-preview-content h2, .email-preview-content h3,
-                        .email-preview-content h4, .email-preview-content h5, .email-preview-content h6 {
-                          color: #0f172a !important;
-                          font-weight: 700 !important;
-                          margin-top: 0 !important;
-                          margin-bottom: 0.5em !important;
-                        }
-                        .email-preview-content p { margin: 0; line-height: 1.5; }
-                        .email-preview-content p:has(> br:only-child) { min-height: 1.5em; }
-                        .email-preview-content p:empty { min-height: 1.5em; }
-                      `}</style>
+                      {/* Full email layout preview */}
                       <div
-                        className="email-preview-content p-4 overflow-auto max-h-[600px] prose prose-sm max-w-none"
-                        style={{ minHeight: '200px', backgroundColor: '#ffffff', color: '#1e293b' }}
-                        dangerouslySetInnerHTML={{ __html: previewData.bodyHtml }}
-                      />
+                        className="overflow-auto max-h-[700px]"
+                        style={{ backgroundColor: '#f4f5f7' }}
+                      >
+                        {/* Email wrapper background */}
+                        <div style={{ padding: '24px 16px', backgroundColor: '#f4f5f7' }}>
+                          {/* Email container */}
+                          <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            {/* Header */}
+                            <div style={{ backgroundColor: '#2563eb', padding: '24px 32px', textAlign: 'center' }}>
+                              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.02em' }}>Support Team</h1>
+                            </div>
+                            {/* Content */}
+                            <div
+                              style={{ backgroundColor: '#ffffff', padding: '32px', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}
+                              dangerouslySetInnerHTML={{ __html: previewData.bodyHtml }}
+                            />
+                            {/* Footer */}
+                            <div style={{ backgroundColor: '#f9fafb', padding: '20px 32px', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
+                              <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+                                This is an automated message from Support Team.<br />
+                                Please do not reply directly to this email unless your system supports email replies.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
