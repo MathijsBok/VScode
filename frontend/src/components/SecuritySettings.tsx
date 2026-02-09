@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { UserProfile } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 
@@ -18,22 +17,6 @@ export default function SecuritySettings() {
   const [securityStatus, setSecurityStatus] = useState<SecurityStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // Detect dark mode
-  useEffect(() => {
-    const checkDarkMode = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
-    };
-
-    checkDarkMode();
-
-    // Watch for theme changes
-    const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-    return () => observer.disconnect();
-  }, []);
 
   const fetchSecurityStatus = async () => {
     try {

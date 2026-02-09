@@ -8,7 +8,7 @@ import { ViewProvider } from './contexts/ViewContext';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
-import TwoFactorHandler from './components/TwoFactorHandler';
+import TwoFactorGuard from './components/TwoFactorGuard';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -68,6 +68,7 @@ function App() {
             <ViewProvider>
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <SignedIn>
+                  <TwoFactorGuard>
                   <Routes>
                     <Route path="/" element={<DashboardRouter />} />
 
@@ -356,6 +357,7 @@ function App() {
                     <Route path="/api-docs" element={<ApiDocs />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
+                </TwoFactorGuard>
                 </SignedIn>
                 <SignedOut>
                   <Routes>
@@ -368,7 +370,6 @@ function App() {
                 </SignedOut>
               </BrowserRouter>
               <Toaster position="top-right" />
-              <TwoFactorHandler />
             </ViewProvider>
           </NotificationProvider>
         </QueryClientProvider>

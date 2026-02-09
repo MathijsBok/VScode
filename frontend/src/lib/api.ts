@@ -15,34 +15,8 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  console.log('[API Request]', config.method?.toUpperCase(), config.url);
   return config;
 });
-
-// Handle 403 TWO_FACTOR_REQUIRED errors
-api.interceptors.response.use(
-  (response) => {
-    console.log('[API Response]', response.config.method?.toUpperCase(), response.config.url, 'Status:', response.status);
-    return response;
-  },
-  (error) => {
-    console.error('[API Error]', error.config?.method?.toUpperCase(), error.config?.url, 'Status:', error.response?.status);
-
-    if (error.response?.status === 403 && error.response?.data?.code === 'TWO_FACTOR_REQUIRED') {
-      console.warn('[2FA Required] User needs to enable 2FA. Grace period:', error.response?.data?.gracePeriodEnd);
-
-      // Dispatch custom event to show modal
-      const event = new CustomEvent('twoFactorRequired', {
-        detail: {
-          gracePeriodEnd: error.response?.data?.gracePeriodEnd
-        }
-      });
-      window.dispatchEvent(event);
-    }
-
-    return Promise.reject(error);
-  }
-);
 
 // Ticket API
 export const ticketApi = {
