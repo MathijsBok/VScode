@@ -520,7 +520,16 @@ export const exportApi = {
     api.get('/export/users/json', {
       params: { startDate, endDate },
       responseType: 'blob'
-    })
+    }),
+
+  formsJson: () =>
+    api.get('/export/forms/json', { responseType: 'blob' }),
+
+  fieldLibraryJson: () =>
+    api.get('/export/field-library/json', { responseType: 'blob' }),
+
+  macrosJson: () =>
+    api.get('/export/macros/json', { responseType: 'blob' })
 };
 
 // API Key API

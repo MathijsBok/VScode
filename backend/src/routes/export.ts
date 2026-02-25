@@ -640,4 +640,108 @@ router.get('/users/json', requireAuth, requireAdmin, async (req: AuthRequest, re
   }
 });
 
+// Export forms as JSON (with field connections)
+router.get('/forms/json', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    const forms = await prisma.form.findMany({
+      include: {
+        formFields: {
+          include: {
+            field: true,
+          },
+          orderBy: { order: 'asc' },
+        },
+      },
+      orderBy: { order: 'asc' },
+    });
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      totalForms: forms.length,
+      forms: forms.map(form => ({
+        name: form.name,
+        description: form.description,
+        isActive: form.isActive,
+        order: form.order,
+        fields: form.formFields.map(ff => ({
+          label: ff.field.label,
+          fieldType: ff.field.fieldType,
+          required: ff.required,
+          order: ff.order,
+          options: ff.field.options,
+          placeholder: ff.field.placeholder,
+          defaultValue: ff.field.defaultValue,
+        })),
+      })),
+    };
+
+    const filename = `forms-export-${new Date().toISOString().split('T')[0]}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.json(exportData);
+  } catch (error) {
+    console.error('Error exporting forms:', error);
+    return res.status(500).json({ error: 'Failed to export forms' });
+  }
+});
+
+// Export field library as JSON
+router.get('/field-library/json', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    const fields = await prisma.formFieldLibrary.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      totalFields: fields.length,
+      fields: fields.map(field => ({
+        label: field.label,
+        fieldType: field.fieldType,
+        required: field.required,
+        options: field.options,
+        placeholder: field.placeholder,
+        defaultValue: field.defaultValue,
+      })),
+    };
+
+    const filename = `field-library-export-${new Date().toISOString().split('T')[0]}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.json(exportData);
+  } catch (error) {
+    console.error('Error exporting field library:', error);
+    return res.status(500).json({ error: 'Failed to export field library' });
+  }
+});
+
+// Export macros as JSON
+router.get('/macros/json', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    const macros = await prisma.macro.findMany({
+      orderBy: { order: 'asc' },
+    });
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      totalMacros: macros.length,
+      macros: macros.map(macro => ({
+        name: macro.name,
+        content: macro.content,
+        category: macro.category,
+        isActive: macro.isActive,
+        order: macro.order,
+      })),
+    };
+
+    const filename = `macros-export-${new Date().toISOString().split('T')[0]}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.json(exportData);
+  } catch (error) {
+    console.error('Error exporting macros:', error);
+    return res.status(500).json({ error: 'Failed to export macros' });
+  }
+});
+
 export default router;

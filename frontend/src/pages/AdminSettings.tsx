@@ -59,6 +59,9 @@ const AdminSettings: React.FC = () => {
   const [isExportingAnalytics, setIsExportingAnalytics] = useState(false);
   const [isExportingTickets, setIsExportingTickets] = useState(false);
   const [isExportingUsers, setIsExportingUsers] = useState(false);
+  const [isExportingForms, setIsExportingForms] = useState(false);
+  const [isExportingFieldLibrary, setIsExportingFieldLibrary] = useState(false);
+  const [isExportingMacros, setIsExportingMacros] = useState(false);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
   const [ticketExportStartDate, setTicketExportStartDate] = useState('');
   const [ticketExportEndDate, setTicketExportEndDate] = useState('');
@@ -1061,6 +1064,69 @@ const AdminSettings: React.FC = () => {
       toast.error(error.response?.data?.error || 'Failed to export users');
     } finally {
       setIsExportingUsers(false);
+    }
+  };
+
+  const handleExportForms = async () => {
+    setIsExportingForms(true);
+    try {
+      const response = await exportApi.formsJson();
+      const blob = new Blob([response.data], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `forms-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Forms exported successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to export forms');
+    } finally {
+      setIsExportingForms(false);
+    }
+  };
+
+  const handleExportFieldLibrary = async () => {
+    setIsExportingFieldLibrary(true);
+    try {
+      const response = await exportApi.fieldLibraryJson();
+      const blob = new Blob([response.data], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `field-library-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Field library exported successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to export field library');
+    } finally {
+      setIsExportingFieldLibrary(false);
+    }
+  };
+
+  const handleExportMacros = async () => {
+    setIsExportingMacros(true);
+    try {
+      const response = await exportApi.macrosJson();
+      const blob = new Blob([response.data], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `macros-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Macros exported successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to export macros');
+    } finally {
+      setIsExportingMacros(false);
     }
   };
 
@@ -2466,6 +2532,117 @@ const AdminSettings: React.FC = () => {
                     <strong>SQL Format:</strong> Better cross-version compatibility (recommended for import to different PG versions)<br/>
                     <strong>Dump Format:</strong> Faster restore, includes indexes/constraints, same PG version recommended
                   </p>
+                </div>
+
+                {/* Export Forms */}
+                <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                      <svg className="w-6 h-6 text-cyan-600 dark:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-md font-medium text-gray-900 dark:text-white">Export Forms</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Download all forms with field configurations as JSON</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleExportForms}
+                    disabled={isExportingForms}
+                    className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isExportingForms ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Exporting...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Forms JSON
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Export Field Library */}
+                <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+                      <svg className="w-6 h-6 text-teal-600 dark:text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-md font-medium text-gray-900 dark:text-white">Export Field Library</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Download all reusable form fields as JSON</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleExportFieldLibrary}
+                    disabled={isExportingFieldLibrary}
+                    className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isExportingFieldLibrary ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Exporting...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Field Library JSON
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Export Macros */}
+                <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                      <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-md font-medium text-gray-900 dark:text-white">Export Macros</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Download all macros/quick replies as JSON</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleExportMacros}
+                    disabled={isExportingMacros}
+                    className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isExportingMacros ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Exporting...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Macros JSON
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
